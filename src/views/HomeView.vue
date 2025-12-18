@@ -1,6 +1,5 @@
 <template>
   <div class="app-container">
-
     <el-container class="main-layout">
       <div class="sidebar">
         <div class="title-container" v-for="item in dataList.Networks">
@@ -31,35 +30,30 @@
         </div>-->
 
         <el-scrollbar>
-
           <div v-loading="loading" class="list-container">
             <el-empty
               v-if="!loading && stopCityList.length === 0"
               description="附近無資料"
             />
+            <el-card v-for="(item, index) in stopCityList" :key="index">
+              <h4 class="label_style">
+                {{ item.SubRouteName.Zh_tw }}
+                <span class="text-unit">
+                  {{ directionText(item.Direction) }}
+                </span>
+              </h4>
 
-            <el-card
-              v-for="(item, index) in stopCityList"
-              :key="index"
-              :class="['location-card', { active: colorStyle(index) }]"
-              shadow="hover"
-              @click="flyToLocation(item, index)"
-            >
-              <div class="card-content">
-           
-                <div class="location-info">
-                  <h4 class="label_style">
-                    {{ item.StopID }} {{ item.StopName.Zh_tw }}
-        
-                  </h4>
-                  <div class="span__style">
-                    <span class="text-unit">
-                      {{ item.StopAddress}}
-                      </span>
-         
-                  </div>
+              <div class="stop__line">
+                <div
+                  v-for="(stop, id) in item.Stops"
+                  :class="['location-top', { active: colorStyle(id) }]"
+                  @click="flyToLocation(stop, id)"
+                >
+                  {{ stop.StopName.Zh_tw }}
                 </div>
               </div>
+
+             
             </el-card>
           </div>
         </el-scrollbar>
@@ -85,13 +79,14 @@ import shadowUrl from "@/assets/Vector-shadow.png?url";
 import Search from "@/assets/search.svg?component";
 import { useAuthStore } from "@/stores/auth";
 import { fetchTainanBusNetwork } from "@/utils/bus";
-import tdxRequest from '@/api/tdxApi';
-const { network, realTimeNearStop, maxBodyLengthapNameURL,subRouteCity } = fetchTainanBusNetwork();
+import tdxRequest from "@/api/tdxApi";
+const { network, realTimeNearStop, maxBodyLengthapNameURL, subRouteCity } =
+  fetchTainanBusNetwork();
 const loading = ref(false);
 const dataList = ref([]);
 const stopCityList = ref([]);
 const activeIndex = ref(null);
-const mapList =ref(null)
+const mapList = ref(null);
 const map = ref(null);
 const markersMap = ref(new Map()); // StopUID -> marker
 const activeMarker = ref(null);
@@ -107,48 +102,140 @@ function init() {
 
 function flyToLocation(item, index) {
   activeIndex.value = index;
-  // 優先透過已有的 markersMap 來定位（StopUID / StopID）
-  const key = item.StopUID || item.StopID;
-  const marker = markersMap.value.get(key);
+  // 支援多種傳入格式：整個 stop（含 StopUID/StopID/StopPosition）或僅 StopPosition
+  // 先取得可能的 StopUID/StopID
+  const key = (item && (item.StopUID || item.StopID)) || null;
+
+  // 取出 lat/lng（支援 PositionLat/PositionLon 或 Latitude/Longitude）
+  const getLatLngFrom = (obj) => {
+    if (!obj) return null;
+    const lat =
+      obj.PositionLat ??
+      obj.PositionLatitude ??
+      obj.Latitude ??
+      obj.StopPosition?.PositionLat ??
+      obj.StopPosition?.Latitude;
+    const lng =
+      obj.PositionLon ??
+      obj.PositionLongitude ??
+      obj.Longitude ??
+      obj.StopPosition?.PositionLon ??
+      obj.StopPosition?.Longitude;
+    if (lat !== undefined && lng !== undefined && lat !== null && lng !== null)
+      return { lat: Number(lat), lng: Number(lng) };
+    return null;
+  };
+
+  const pos = getLatLngFrom(item);
+
+  // 嘗試直接以 StopUID/StopID 找 marker
+  let marker = null;
+  if (key) marker = markersMap.value.get(key);
+
+  // 若沒有 key，或找不到 marker，嘗試以座標比對現有標記（小範圍容差）
+  if (!marker && pos) {
+    const tol = 0.0006; // 約 60m
+    for (const [k, m] of markersMap.value.entries()) {
+      try {
+        const ll = m.getLatLng();
+        if (
+          Math.abs(ll.lat - pos.lat) <= tol &&
+          Math.abs(ll.lng - pos.lng) <= tol
+        ) {
+          marker = m;
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
   if (marker && map.value) {
     const latlng = marker.getLatLng();
     map.value.setView([latlng.lat, latlng.lng], 16);
     try {
-      // 高亮標記
-      marker.setIcon(L.icon({ iconUrl: iconRetinaUrl, iconSize: [34,44], iconAnchor:[17,44], popupAnchor:[0,-44], shadowUrl, shadowSize:[40,40], shadowAnchor:[14,40] }));
+      marker.setIcon(
+        L.icon({
+          iconUrl: iconRetinaUrl,
+          iconSize: [34, 44],
+          iconAnchor: [17, 44],
+          popupAnchor: [0, -44],
+          shadowUrl,
+          shadowSize: [40, 40],
+          shadowAnchor: [14, 40],
+        })
+      );
     } catch (e) {}
     if (activeMarker.value && activeMarker.value !== marker) {
-      try { activeMarker.value.setIcon(L.icon({ iconUrl, iconSize:[28,36], iconAnchor:[14,36], popupAnchor:[0,-36], shadowUrl, shadowSize:[36,36], shadowAnchor:[12,36] })); } catch (e) {}
+      try {
+        activeMarker.value.setIcon(
+          L.icon({
+            iconUrl,
+            iconSize: [28, 36],
+            iconAnchor: [14, 36],
+            popupAnchor: [0, -36],
+            shadowUrl,
+            shadowSize: [36, 36],
+            shadowAnchor: [12, 36],
+          })
+        );
+      } catch (e) {}
     }
     activeMarker.value = marker;
-    marker.openTooltip();
-  } else if (item.StopPosition && item.StopPosition.Latitude && item.StopPosition.Longitude) {
-    map.value.setView([item.StopPosition.Latitude, item.StopPosition.Longitude], 16);
-  } else {
-    ElMessage.warning("該地點無經緯度資訊");
+    try {
+      marker.openTooltip();
+    } catch (e) {}
+    return;
   }
+
+  // 若沒有找到標記，但有座標，直接定位
+  if (pos && map.value) {
+    map.value.setView([pos.lat, pos.lng], 16);
+    return;
+  }
+
+  ElMessage.warning("該地點無經緯度資訊");
 }
 
 function networkApi() {
-  dataList.value = network.data;
-  //  tdxRequest.get('/Bus/Network/City/Tainan?%24top=30&%24format=JSON')
-  //   .then(function (res) {
-  //     dataList.value = res.data;
-  //     console.log(res, "res");
-  //   })
-  //   .catch(function (error) {
-  //     console.log(error);
-  //   });
+  //dataList.value = network.data;
+  tdxRequest
+    .get("/Bus/Network/City/Tainan?%24top=30&%24format=JSON")
+    .then(function (res) {
+      dataList.value = res.data;
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
 }
 
 function stopApi() {
   // 將即時資料加入 arrivalText，優先使用 EstimateTime（若有）
-  stopCityList.value = maxBodyLengthapNameURL.Stops;
-    // .map((stop) => ({
-    //   ...stop,
-    //   // arrivalText: computeArrivalText(stop),
-    // }))
-    // .sort((a, b) => (Number(a.StopSequence) || 0) - (Number(b.StopSequence) || 0));
+  // stopCityList.value = maxBodyLengthapNameURL.data.StopOfRoutes;
+  tdxRequest
+    .get("/Bus/StopOfRoute/City/Tainan?%24top=30&%24format=JSON")
+    .then(function (res) {
+      stopCityList.value = res.data.StopOfRoutes;
+      stopCityList.value.forEach((item) => {
+        item.Stops = item.Stops.map((stop) => ({
+          ...stop,
+        })).sort(
+          (a, b) =>
+            (Number(a.StopSequence) || 0) - (Number(b.StopSequence) || 0)
+        );
+      });
+      console.log(res.data.StopOfRoutes, "res");
+      // 在取得 Stops 資料後，若地圖已初始化則加入標記；否則嘗試初始化地圖再加入
+      tryAddMarkersFromStops();
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+
+  // .map((stop) => ({
+  //   ...stop,
+  //   // arrivalText: computeArrivalText(stop),
+  // }))
+  // .sort((a, b) => (Number(a.StopSequence) || 0) - (Number(b.StopSequence) || 0));
   // axios
   //   .get(
   //     "https://tdx.transportdata.tw/api/basic/v3/Bus/SubRoute/City/Tainan?%24top=30&%24format=JSON",
@@ -164,17 +251,76 @@ function stopApi() {
   //   });
 }
 
+function tryAddMarkersFromStops() {
+  // 如果地圖尚未建立，先呼叫 stopCityＭap() 進行初始化（它會建立 map）
+  if (!map.value) {
+    stopCityＭap();
+    // 等下一個 event loop，再嘗試加入標記
+    setTimeout(() => addMarkersFromStops(), 300);
+  } else {
+    addMarkersFromStops();
+  }
+}
 
-function stopCityＭap(){
-   mapList.value = maxBodyLengthapNameURL;
-    console.log( mapList.value,"mapList");
+function addMarkersFromStops() {
+  if (!map.value || !stopCityList.value) return;
+  // 建立 icons
+  const defaultIcon = L.icon({
+    iconUrl,
+    iconSize: [28, 36],
+    iconAnchor: [14, 36],
+    popupAnchor: [0, -36],
+    shadowUrl,
+    shadowSize: [36, 36],
+    shadowAnchor: [12, 36],
+  });
+  // 逐一處理 StopOfRoutes 裡的 stops
+  stopCityList.value.forEach((route) => {
+    (route.Stops || []).forEach((s) => {
+      const lat =
+        s.StopPosition?.PositionLat ??
+        s.PositionLat ??
+        s.PositionLatitude ??
+        s.Latitude;
+      const lon =
+        s.StopPosition?.PositionLon ??
+        s.PositionLon ??
+        s.PositionLongitude ??
+        s.Longitude;
+      const key =
+        s.StopUID || s.StopID || s.StationUID || s.StationID || `${lat}_${lon}`;
+      if (!lat || !lon) return;
+      if (markersMap.value.has(key)) return; // 已有
+      try {
+        const m = L.marker([Number(lat), Number(lon)], {
+          icon: defaultIcon,
+        }).addTo(map.value);
+        const title = s.StopName?.Zh_tw || s.StopName?.En || s.Name || "停靠站";
+        m.bindTooltip(`<div class='tooltipHTML'>${title}</div>`, {
+          direction: "top",
+          offset: [0, -10],
+          permanent: false,
+        });
+        markersMap.value.set(key, m);
+      } catch (e) {
+        console.error("add marker error", e);
+      }
+    });
+  });
+}
+
+function stopCityＭap() {
   // 初始化地圖與標記（如果尚未建立）
   if (!map.value) {
     nextTick(() => {
       try {
-        map.value = L.map("map", { zoomControl: true }).setView([23.0, 120.2], 12);
+        map.value = L.map("map", { zoomControl: true }).setView(
+          [23.0, 120.2],
+          12
+        );
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(map.value);
 
         // 建立 icon
@@ -186,7 +332,7 @@ function stopCityＭap(){
           popupAnchor: [0, -36],
           shadowUrl: shadowUrl,
           shadowSize: [36, 36],
-          shadowAnchor: [12, 36]
+          shadowAnchor: [12, 36],
         });
 
         const activeIcon = L.icon({
@@ -197,24 +343,33 @@ function stopCityＭap(){
           popupAnchor: [0, -44],
           shadowUrl: shadowUrl,
           shadowSize: [40, 40],
-          shadowAnchor: [14, 40]
+          shadowAnchor: [14, 40],
         });
 
         // 如果有 stops，將標記加入地圖
-        const stops = mapList.value && mapList.value.Stops ? mapList.value.Stops : [];
+        const stops =
+          mapList.value && mapList.value.Stops ? mapList.value.Stops : [];
         const bounds = [];
         stops.forEach((s) => {
           const lat = s.StopPosition?.PositionLat;
           const lon = s.StopPosition?.PositionLon;
           if (lat && lon) {
-            const marker = L.marker([lat, lon], { icon: defaultIcon }).addTo(map.value);
+            const marker = L.marker([lat, lon], { icon: defaultIcon }).addTo(
+              map.value
+            );
             const title = s.StopName?.Zh_tw || s.StopName?.En || "停靠站";
-            marker.bindTooltip(`<div class='tooltipHTML'>${title}</div>`, { direction: 'top', offset: [0, -10], permanent: false });
-            marker.on('click', () => {
+            marker.bindTooltip(`<div class='tooltipHTML'>${title}</div>`, {
+              direction: "top",
+              offset: [0, -10],
+              permanent: false,
+            });
+            marker.on("click", () => {
               // 透過 StopUID 嘗試在側邊欄選取相對應項目
               activeMarker.value = marker;
               // 若側邊資料有符合的 index，切換 activeIndex
-              const idx = stopCityList.value.findIndex(x => x.StopUID === s.StopUID || x.StopID === s.StopID);
+              const idx = stopCityList.value.findIndex(
+                (x) => x.StopUID === s.StopUID || x.StopID === s.StopID
+              );
               if (idx !== -1) {
                 activeIndex.value = idx;
               }
@@ -231,7 +386,7 @@ function stopCityＭap(){
           map.value.fitBounds(bounds, { padding: [40, 40] });
         }
       } catch (e) {
-        console.error('init leaflet error', e);
+        console.error("init leaflet error", e);
       }
     });
   }
@@ -240,9 +395,13 @@ function stopCityＭap(){
   function highlightMarker(marker, activeIcon, defaultIcon) {
     // reset previous
     if (activeMarker.value && activeMarker.value !== marker) {
-      try { activeMarker.value.setIcon(defaultIcon); } catch (e) {}
+      try {
+        activeMarker.value.setIcon(defaultIcon);
+      } catch (e) {}
     }
-    try { marker.setIcon(activeIcon); } catch (e) {}
+    try {
+      marker.setIcon(activeIcon);
+    } catch (e) {}
     activeMarker.value = marker;
   }
 
@@ -254,12 +413,32 @@ function stopCityＭap(){
       const latlng = m.getLatLng();
       map.value.setView([latlng.lat, latlng.lng], 16);
       // 重新建立 icon 以避免 scope 問題
-      const ai = L.icon({ iconUrl: iconRetinaUrl, iconSize: [34,44], iconAnchor:[17,44], popupAnchor:[0,-44], shadowUrl, shadowSize:[40,40], shadowAnchor:[14,40] });
-      const di = L.icon({ iconUrl, iconSize:[28,36], iconAnchor:[14,36], popupAnchor:[0,-36], shadowUrl, shadowSize:[36,36], shadowAnchor:[12,36] });
+      const ai = L.icon({
+        iconUrl: iconRetinaUrl,
+        iconSize: [34, 44],
+        iconAnchor: [17, 44],
+        popupAnchor: [0, -44],
+        shadowUrl,
+        shadowSize: [40, 40],
+        shadowAnchor: [14, 40],
+      });
+      const di = L.icon({
+        iconUrl,
+        iconSize: [28, 36],
+        iconAnchor: [14, 36],
+        popupAnchor: [0, -36],
+        shadowUrl,
+        shadowSize: [36, 36],
+        shadowAnchor: [12, 36],
+      });
       if (activeMarker.value && activeMarker.value !== m) {
-        try { activeMarker.value.setIcon(di); } catch (e) {}
+        try {
+          activeMarker.value.setIcon(di);
+        } catch (e) {}
       }
-      try { m.setIcon(ai); } catch (e) {}
+      try {
+        m.setIcon(ai);
+      } catch (e) {}
       activeMarker.value = m;
       m.openTooltip();
     }
@@ -284,7 +463,6 @@ function stopCityＭap(){
   //   .catch(function (error) {
   //     console.log(error);
   //   });
-
 }
 function computeArrivalText(item) {
   // 若 API 提供 EstimateTime（單位：秒），直接顯示分鐘
@@ -306,7 +484,9 @@ function computeArrivalText(item) {
       const ageSec = Math.floor((now - srcRec) / 1000);
       if (ageSec < 60) return `更新 ${ageSec} 秒前`;
       const ageMin = Math.floor(ageSec / 60);
-      const timeStr = trans ? `（ ${directionText(item.Direction)} ${trans.toLocaleTimeString()}）` : "";
+      const timeStr = trans
+        ? `（ ${directionText(item.Direction)} ${trans.toLocaleTimeString()}）`
+        : "";
       return `更新 ${ageMin} 分鐘前${timeStr}`;
     }
   } catch (e) {
@@ -315,7 +495,6 @@ function computeArrivalText(item) {
 
   return "無預估時間";
 }
-
 
 function directionText(direction) {
   return direction === 0 ? "往返" : direction === 1 ? "去程" : "回程";
@@ -584,5 +763,29 @@ body,
 
 .el-button {
   border-radius: var(--el-border-radius-base);
+}
+.stop__line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.stop__line > .location-top {
+  white-space: nowrap;
+  position: relative;
+
+  border: solid #ddd thin;
+  padding: 0px 5px;
+  border-radius: 3px;
+  &:hover {
+    border: solid #408660 thin;
+    box-shadow: 0 0 5px #88c7a5;
+    background: rgb(136 199 165 / 13%);
+    cursor: pointer;
+  }
+  &.active{
+    border: solid #408660 thin;
+    box-shadow: 0 0 5px #88c7a5;
+    background: rgb(136 199 165 / 13%);
+  }
 }
 </style>
