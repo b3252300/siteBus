@@ -13,7 +13,7 @@ const router = createRouter({
       path: '/',
       name: 'map',
       component: () => import('@/views/HomeView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: false },
     }
   ],
 })

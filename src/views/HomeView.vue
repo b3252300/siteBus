@@ -1,10 +1,15 @@
 <template>
   <div class="app-container">
+
     <el-container class="main-layout">
       <div class="sidebar">
-        <h2 class="title">{{ title }}</h2>
+        <div class="title-container" v-for="item in dataList.Networks">
+          <h2 class="title-container__lable">{{ item.NetworkName.Zh_tw }}</h2>
+          <div class="title-container_sublable">{{ item.NetworkName.En }}</div>
+        </div>
+
         <div class="search">
-          <el-input
+          <!-- <el-input
             v-model="searchText"
             placeholder="搜尋地址（例如：新北市板橋區府中路）"
             clearable
@@ -13,37 +18,45 @@
             <template #append>
               <Search />
             </template>
-          </el-input>
+          </el-input> -->
         </div>
-        <div class="sidebar-header">
+
+        <!-- <div class="sidebar-header">
           <h3>附近的都更地點</h3>
           <small
             ><el-icon><LocationFilled /></el-icon> 目前位置:
             {{ userLocation.lat?.toFixed(4) }},
             {{ userLocation.lng?.toFixed(4) }}</small
           >
-        </div>
+        </div>-->
 
         <el-scrollbar>
+
           <div v-loading="loading" class="list-container">
             <el-empty
-              v-if="!loading && renewalList.length === 0"
+              v-if="!loading && stopCityList.length === 0"
               description="附近無資料"
             />
 
             <el-card
-              v-for="(item, index) in renewalList"
+              v-for="(item, index) in stopCityList"
               :key="index"
               :class="['location-card', { active: colorStyle(index) }]"
               shadow="hover"
               @click="flyToLocation(item, index)"
             >
               <div class="card-content">
-                <img v-if="item.image" :src="item.image" class="location-img" />
+           
                 <div class="location-info">
-                  <h4>{{ item.stop_name }}</h4>
-                  <div class="km__style">
-                    {{ item.distance }} <span class="text-unit">km</span>
+                  <h4 class="label_style">
+                    {{ item.StopID }} {{ item.StopName.Zh_tw }}
+        
+                  </h4>
+                  <div class="span__style">
+                    <span class="text-unit">
+                      {{ item.StopAddress}}
+                      </span>
+         
                   </div>
                 </div>
               </div>
@@ -60,7 +73,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from "vue";
+import { ref, reactive, onMounted, nextTick, watch } from "vue";
+
 import L from "leaflet";
 import { ElMessage, ElNotification } from "element-plus";
 import axios from "axios";
@@ -70,250 +84,242 @@ import iconRetinaUrl from "@/assets/Vector-icon-2x.png?url";
 import shadowUrl from "@/assets/Vector-shadow.png?url";
 import Search from "@/assets/search.svg?component";
 import { useAuthStore } from "@/stores/auth";
-
-const authStore = useAuthStore();
-const user = authStore.user;
-
-const userLocation = reactive({ lat: null, lng: null });
-const renewalList = ref([]);
+import { fetchTainanBusNetwork } from "@/utils/bus";
+import tdxRequest from '@/api/tdxApi';
+const { network, realTimeNearStop, maxBodyLengthapNameURL,subRouteCity } = fetchTainanBusNetwork();
 const loading = ref(false);
-const map = ref(null);
-const title = ref("");
+const dataList = ref([]);
+const stopCityList = ref([]);
 const activeIndex = ref(null);
-const searchText = ref("");
-
-const CustomIcon = L.Icon.extend({
-  options: {
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41],
-  },
-});
-
-const defaultMarkerIcon = new CustomIcon({
-  iconUrl: iconUrl,
-  iconRetinaUrl: iconRetinaUrl,
-  shadowUrl: shadowUrl,
-});
-
+const mapList =ref(null)
+const map = ref(null);
+const markersMap = ref(new Map()); // StopUID -> marker
+const activeMarker = ref(null);
 onMounted(() => {
-  initSystem();
+  init();
 });
 
-const initSystem = async () => {
-  await nextTick();
-  initMap();
-};
+function init() {
+  networkApi();
+  stopApi();
+  stopCityＭap();
+}
 
-const initMap = () => {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        userLocation.lat = position.coords.latitude;
-        userLocation.lng = position.coords.longitude;
-        renderMap([userLocation.lat, userLocation.lng]);
-      },
-      (err) => {
-        userLocation.lat = 25.012;
-        userLocation.lng = 121.465;
-        renderMap([25.012, 121.465]);
-      }
-    );
-  }
-};
-
-const renderMap = (center) => {
-  if (map.value) {
-    map.value.remove();
-  }
-
-  const mapDiv = document.getElementById("map");
-  if (!mapDiv) {
-    console.error("找不到地圖容器 #map");
-    return;
-  }
-
-  map.value = L.map("map").setView(center, 14);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap",
-  }).addTo(map.value);
-
-  const tooltipHTML = `
-  <div class="tooltipHTML">
-    ${
-      (user.google && user.google.picture) ||
-      (user.facebook && user.facebook.picture)
-        ? `
-          <div class="tooltipHTML__img">
-            ${user.google && user.google.picture ? `<img src="${user.google.picture}">` : ""}
-            ${user.facebook && user.facebook.picture ? `<img src="${user.facebook.picture}" style="margin-left: -13px">` : ""}
-          </div>
-        `
-        : ""
+function flyToLocation(item, index) {
+  activeIndex.value = index;
+  // 優先透過已有的 markersMap 來定位（StopUID / StopID）
+  const key = item.StopUID || item.StopID;
+  const marker = markersMap.value.get(key);
+  if (marker && map.value) {
+    const latlng = marker.getLatLng();
+    map.value.setView([latlng.lat, latlng.lng], 16);
+    try {
+      // 高亮標記
+      marker.setIcon(L.icon({ iconUrl: iconRetinaUrl, iconSize: [34,44], iconAnchor:[17,44], popupAnchor:[0,-44], shadowUrl, shadowSize:[40,40], shadowAnchor:[14,40] }));
+    } catch (e) {}
+    if (activeMarker.value && activeMarker.value !== marker) {
+      try { activeMarker.value.setIcon(L.icon({ iconUrl, iconSize:[28,36], iconAnchor:[14,36], popupAnchor:[0,-36], shadowUrl, shadowSize:[36,36], shadowAnchor:[12,36] })); } catch (e) {}
     }
-    <span style="font-weight: bold; font-size: 14px;">我底加啦!</span>
-  </div>
-`;
-
-  L.marker(center, {
-    icon: defaultMarkerIcon,
-  })
-    .addTo(map.value)
-    .bindTooltip(tooltipHTML, {
-      permanent: true,
-      direction: "top",
-      className: "user-location-tooltip",
-    })
-    .openTooltip();
-
-  fetchPolygon();
-  fetchNearbySpots();
-};
-
-const fetchPolygon = async () => {
-  try {
-    const res = await axios.get(
-      "https://enterprise.oakmega.ai/api/v1/server/xinbei/geolocation-json",
-      { params: { directory: "tucheng.json" } }
-    );
-
-    const geoData = res.data.result;
-    if (geoData.name) title.value = geoData.name;
-
-    const geoJsonLayer = L.geoJSON(geoData, {
-      style: (feature) => ({
-        color: "#0066ff",
-        weight: 3,
-        opacity: 1,
-        fillColor: "#0066ff",
-        fillOpacity: 0.1,
-      }),
-
-      onEachFeature: (feature, layer) => {
-        if (feature.properties) {
-          const props = feature.properties;
-
-          const popupContent = `
-            <div style="font-size:14px;">
-              <b>分區：</b> ${props["分區"] || "未知"}<br>
-              <b>備註：</b> ${props["TxtMemo"] || "無"}<br>
-              <b>面積：</b> ${props["SHAPE_Area"] ? props["SHAPE_Area"].toFixed(2) : 0}
-            </div>
-          `;
-          layer.bindPopup(popupContent);
-        }
-      },
-    }).addTo(map.value);
-
-    const bounds = geoJsonLayer.getBounds();
-    if (bounds.isValid()) {
-      map.value.fitBounds(bounds);
-    }
-
-    ElNotification({
-      title: "Polygon 載入成功",
-      message: `已載入 ${geoData.features.length} 筆都更資料`,
-      type: "success",
-    });
-  } catch (error) {
-    console.error("Fetch Polygon Error:", error);
-    ElMessage.error("Polygon 資料載入失敗");
-  }
-};
-
-const fetchNearbySpots = async () => {
-  loading.value = true;
-
-  if (!userLocation.lat || !userLocation.lng) {
-    console.warn("無效座標，停止呼叫 API", userLocation);
-    loading.value = false;
-    return;
-  }
-
-  try {
-    const res = await axios.post(
-      "https://enterprise.oakmega.ai/api/v1/server/xinbei/calc-distance",
-      {
-        lat: userLocation.lat,
-        lng: userLocation.lng,
-      }
-    );
-
-    const data = res.data?.result || res.data || [];
-
-    renewalList.value = data;
-
-    data.forEach((spot) => {
-      const spotLat = spot.lat || spot.latitude;
-      const spotLng = spot.lng || spot.longitude;
-
-      if (spotLat && spotLng) {
-        const marker = L.marker([spotLat, spotLng], {
-          icon: defaultMarkerIcon,
-        }).addTo(map.value).bindPopup(`<b>${spot.stop_name}</b><br>
-        距離: ${spot.distance} m<br>
-        ${spot.image ? `<img src="${spot.image}" style="width:100%; margin-top:5px; border-radius:4px;">` : ""}`);
-
-        spot.markerInstance = marker;
-      }
-    });
-  } catch (error) {
-    console.error("API ERROR:", error);
-    ElMessage.error("附近地點載入失敗");
-  } finally {
-    loading.value = false;
-  }
-};
-
-const flyToLocation = (item, index) => {
-  if (item.markerInstance) {
-    activeIndex.value = index;
-    map.value.flyTo(item.markerInstance.getLatLng(), 16);
-    item.markerInstance.openPopup();
+    activeMarker.value = marker;
+    marker.openTooltip();
+  } else if (item.StopPosition && item.StopPosition.Latitude && item.StopPosition.Longitude) {
+    map.value.setView([item.StopPosition.Latitude, item.StopPosition.Longitude], 16);
   } else {
-    ElMessage.warning("該地點無座標資訊");
+    ElMessage.warning("該地點無經緯度資訊");
   }
-};
+}
 
-const searchAddress = async () => {
-  if (!searchText.value) {
-    ElMessage.warning("請輸入地址");
-    return;
+function networkApi() {
+  dataList.value = network.data;
+  //  tdxRequest.get('/Bus/Network/City/Tainan?%24top=30&%24format=JSON')
+  //   .then(function (res) {
+  //     dataList.value = res.data;
+  //     console.log(res, "res");
+  //   })
+  //   .catch(function (error) {
+  //     console.log(error);
+  //   });
+}
+
+function stopApi() {
+  // 將即時資料加入 arrivalText，優先使用 EstimateTime（若有）
+  stopCityList.value = maxBodyLengthapNameURL.Stops;
+    // .map((stop) => ({
+    //   ...stop,
+    //   // arrivalText: computeArrivalText(stop),
+    // }))
+    // .sort((a, b) => (Number(a.StopSequence) || 0) - (Number(b.StopSequence) || 0));
+  // axios
+  //   .get(
+  //     "https://tdx.transportdata.tw/api/basic/v3/Bus/SubRoute/City/Tainan?%24top=30&%24format=JSON",
+  //     {
+  //       headers: getAuthorizationHeader(),
+  //     }
+  //   )
+  //   .then(function (res) {
+  //     console.log(res, "res");
+  //   })
+  //   .catch(function (error) {
+  //     console.log(error);
+  //   });
+}
+
+
+function stopCityＭap(){
+   mapList.value = maxBodyLengthapNameURL;
+    console.log( mapList.value,"mapList");
+  // 初始化地圖與標記（如果尚未建立）
+  if (!map.value) {
+    nextTick(() => {
+      try {
+        map.value = L.map("map", { zoomControl: true }).setView([23.0, 120.2], 12);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map.value);
+
+        // 建立 icon
+        const defaultIcon = L.icon({
+          iconUrl: iconUrl,
+          iconRetinaUrl: iconRetinaUrl,
+          iconSize: [28, 36],
+          iconAnchor: [14, 36],
+          popupAnchor: [0, -36],
+          shadowUrl: shadowUrl,
+          shadowSize: [36, 36],
+          shadowAnchor: [12, 36]
+        });
+
+        const activeIcon = L.icon({
+          iconUrl: iconRetinaUrl,
+          iconRetinaUrl: iconRetinaUrl,
+          iconSize: [34, 44],
+          iconAnchor: [17, 44],
+          popupAnchor: [0, -44],
+          shadowUrl: shadowUrl,
+          shadowSize: [40, 40],
+          shadowAnchor: [14, 40]
+        });
+
+        // 如果有 stops，將標記加入地圖
+        const stops = mapList.value && mapList.value.Stops ? mapList.value.Stops : [];
+        const bounds = [];
+        stops.forEach((s) => {
+          const lat = s.StopPosition?.PositionLat;
+          const lon = s.StopPosition?.PositionLon;
+          if (lat && lon) {
+            const marker = L.marker([lat, lon], { icon: defaultIcon }).addTo(map.value);
+            const title = s.StopName?.Zh_tw || s.StopName?.En || "停靠站";
+            marker.bindTooltip(`<div class='tooltipHTML'>${title}</div>`, { direction: 'top', offset: [0, -10], permanent: false });
+            marker.on('click', () => {
+              // 透過 StopUID 嘗試在側邊欄選取相對應項目
+              activeMarker.value = marker;
+              // 若側邊資料有符合的 index，切換 activeIndex
+              const idx = stopCityList.value.findIndex(x => x.StopUID === s.StopUID || x.StopID === s.StopID);
+              if (idx !== -1) {
+                activeIndex.value = idx;
+              }
+              // 高亮此標記
+              highlightMarker(marker, activeIcon, defaultIcon);
+              map.value.setView([lat, lon], 16);
+            });
+            markersMap.value.set(s.StopUID || s.StopID, marker);
+            bounds.push([lat, lon]);
+          }
+        });
+
+        if (bounds.length > 0) {
+          map.value.fitBounds(bounds, { padding: [40, 40] });
+        }
+      } catch (e) {
+        console.error('init leaflet error', e);
+      }
+    });
   }
 
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchText.value)}`;
-
-    const res = await axios.get(url);
-
-    if (!res.data || res.data.length === 0) {
-      ElMessage.error("找不到該地址");
-      return;
+  // helper: 切換標記樣式
+  function highlightMarker(marker, activeIcon, defaultIcon) {
+    // reset previous
+    if (activeMarker.value && activeMarker.value !== marker) {
+      try { activeMarker.value.setIcon(defaultIcon); } catch (e) {}
     }
-
-    const location = res.data[0];
-    const lat = parseFloat(location.lat);
-    const lng = parseFloat(location.lon);
-
-    userLocation.lat = lat;
-    userLocation.lng = lng;
-
-    map.value.flyTo([lat, lng], 16);
-
-    L.marker([lat, lng])
-      .addTo(map.value)
-      .bindPopup(`搜尋結果：${searchText.value}`)
-      .openPopup();
-
-    fetchNearbySpots();
-  } catch (e) {
-    console.error(e);
-    ElMessage.error("地址搜尋失敗，請稍後再試");
+    try { marker.setIcon(activeIcon); } catch (e) {}
+    activeMarker.value = marker;
   }
-};
 
+  // 也提供外部呼叫用來以 StopUID 高亮
+  const highlightByStop = (stop) => {
+    const key = stop.StopUID || stop.StopID;
+    const m = markersMap.value.get(key);
+    if (m) {
+      const latlng = m.getLatLng();
+      map.value.setView([latlng.lat, latlng.lng], 16);
+      // 重新建立 icon 以避免 scope 問題
+      const ai = L.icon({ iconUrl: iconRetinaUrl, iconSize: [34,44], iconAnchor:[17,44], popupAnchor:[0,-44], shadowUrl, shadowSize:[40,40], shadowAnchor:[14,40] });
+      const di = L.icon({ iconUrl, iconSize:[28,36], iconAnchor:[14,36], popupAnchor:[0,-36], shadowUrl, shadowSize:[36,36], shadowAnchor:[12,36] });
+      if (activeMarker.value && activeMarker.value !== m) {
+        try { activeMarker.value.setIcon(di); } catch (e) {}
+      }
+      try { m.setIcon(ai); } catch (e) {}
+      activeMarker.value = m;
+      m.openTooltip();
+    }
+  };
+
+  // 監聽 activeIndex 的變化，當側邊切換站點時也更新地圖標記
+  // 由於是 script setup，可以用 watch (動態載入)
+  import("vue").then(({ watch }) => {
+    watch(activeIndex, (newIdx) => {
+      const item = stopCityList.value[newIdx];
+      if (item && map.value) {
+        highlightByStop(item);
+      }
+    });
+  });
+
+  // 备用：若要使用 API 抓取遠端 stops，可在此打開
+  // tdxRequest.get('/Bus/Stop/City/Tainan?%24top=30&%24format=JSON')
+  //   .then(function (res) {
+  //     mapList.value = res.data;
+  //   })
+  //   .catch(function (error) {
+  //     console.log(error);
+  //   });
+
+}
+function computeArrivalText(item) {
+  // 若 API 提供 EstimateTime（單位：秒），直接顯示分鐘
+  if (item.EstimateTime !== undefined && item.EstimateTime !== null) {
+    const seconds = Number(item.EstimateTime);
+    if (!isNaN(seconds)) {
+      if (seconds <= 0) return "即將到站";
+      const mins = Math.ceil(seconds / 60);
+      return `${mins} 分鐘`;
+    }
+  }
+
+  // 否則以最近資料時間做為 fallback（顯示更新多久前與車上時間）
+  try {
+    const now = new Date();
+    const srcRec = item.SrcRecTime ? new Date(item.SrcRecTime) : null;
+    const trans = item.TransTime ? new Date(item.TransTime) : null;
+    if (srcRec) {
+      const ageSec = Math.floor((now - srcRec) / 1000);
+      if (ageSec < 60) return `更新 ${ageSec} 秒前`;
+      const ageMin = Math.floor(ageSec / 60);
+      const timeStr = trans ? `（ ${directionText(item.Direction)} ${trans.toLocaleTimeString()}）` : "";
+      return `更新 ${ageMin} 分鐘前${timeStr}`;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return "無預估時間";
+}
+
+
+function directionText(direction) {
+  return direction === 0 ? "往返" : direction === 1 ? "去程" : "回程";
+}
 function colorStyle(index) {
   return index === activeIndex.value;
 }
@@ -336,6 +342,12 @@ function colorStyle(index) {
   font-size: 18px;
 }
 
+.eta-text {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #408560;
+}
+
 html,
 body,
 #app {
@@ -350,16 +362,19 @@ body,
   width: 100vw;
   position: relative;
 }
-
-.title {
-  font-size: 18px;
-  font-weight: bolder;
-  color: #ffffff;
+.title-container {
   padding: 0.4rem 0;
   text-align: center;
   background: #88c6a5;
 }
-
+.title-container__lable {
+  font-size: 18px;
+  font-weight: bolder;
+}
+.title-container_sublable {
+  font-size: 14px;
+  color: #404040;
+}
 .search {
   background: #72af8f;
   color: #408560;
@@ -395,7 +410,7 @@ body,
   height: 95%;
   border-radius: var(--el-border-radius-base);
   overflow: hidden;
-  width: 350px;
+  width: 378px;
   @media (max-width: 575px) {
     height: 50%;
     top: 50%;
@@ -456,13 +471,10 @@ body,
   display: flex;
   justify-content: space-between;
   width: 100%;
-  font-weight: bolder;
-  align-items: center;
-}
 
-.location-info h4 {
-  margin: 0;
-  font-size: 20px;
+  font-weight: bolder;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 :deep(.leaflet-tooltip) {
@@ -557,11 +569,17 @@ body,
   --el-tag-font-size: 16px;
 }
 
-.km__style {
-  font-size: 26px;
-  font-weight: 500;
+.label_style {
+  font-size: 20px;
   color: #000;
-  line-height: 1;
+  font-weight: 500;
+}
+.span__style {
+  font-size: 13px;
+
+  color: #000;
+  line-height: 1.4;
+  width: 100%;
 }
 
 .el-button {
