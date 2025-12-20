@@ -1,34 +1,26 @@
 <template>
   <div class="app-container">
-    <el-container class="main-layout">
-      <div class="sidebar">
+    <el-container
+      class="main-layout"
+      :class="{ sidebarOpenActive: ui.sidebarOpen }"
+    >
+      <div class="sidebar" :class="{ active: ui.sidebarOpen }">
+
         <div class="title-container" v-for="item in dataList.Networks">
+    
+     
           <h2 class="title-container__lable">{{ item.NetworkName.Zh_tw }}</h2>
           <div class="title-container_sublable">{{ item.NetworkName.En }}</div>
         </div>
+<div class="control-container">
+    <el-radio-group v-model="vaildControl"  fill="#3e835e" @change="handleControl" size="small">
+      <el-radio-button label="去程" value="go" />
+      <el-radio-button label="往返" value="back" />
+ 
+    </el-radio-group>
 
-        <div class="search">
-          <!-- <el-input
-            v-model="searchText"
-            placeholder="搜尋地址（例如：新北市板橋區府中路）"
-            clearable
-            @keyup.enter="searchAddress"
-          >
-            <template #append>
-              <Search />
-            </template>
-          </el-input> -->
-        </div>
-
-        <!-- <div class="sidebar-header">
-          <h3>附近的都更地點</h3>
-          <small
-            ><el-icon><LocationFilled /></el-icon> 目前位置:
-            {{ userLocation.lat?.toFixed(4) }},
-            {{ userLocation.lng?.toFixed(4) }}</small
-          >
-        </div>-->
-
+</div>
+ 
         <el-scrollbar>
           <div v-loading="loading" class="list-container">
             <el-empty
@@ -36,24 +28,35 @@
               description="附近無資料"
             />
             <el-card v-for="(item, index) in stopCityList" :key="index">
-              <h4 class="label_style">
+              <h1 class="label_style" @click="toggleShowLine(index)">
                 {{ item.SubRouteName.Zh_tw }}
                 <span class="text-unit">
                   {{ directionText(item.Direction) }}
                 </span>
-              </h4>
+              </h1>
 
-              <div class="stop__line">
+              <div v-show="showLine[index]" class="stop__line">
                 <div
                   v-for="(stop, id) in item.Stops"
                   :class="['location-top', { active: colorStyle(id) }]"
                   @click="flyToLocation(stop, id)"
                 >
-                  {{ stop.StopName.Zh_tw }}
+                  <strong>{{ stop.StopSequence }}</strong>
+                  <span class="stop-name">{{ stop.StopName.Zh_tw }}</span>
+                  <span
+                    v-if="boardingTypeText(stop.BoardingType)"
+                    class="badge"
+                  >
+                    {{ boardingTypeText(stop.BoardingType) }}
+                  </span>
+                  <span
+                    v-if="isSectionPoint(stop.IsSectionPoint)"
+                    class="badge section"
+                  >
+                    分段點
+                  </span>
                 </div>
               </div>
-
-             
             </el-card>
           </div>
         </el-scrollbar>
@@ -67,7 +70,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick, watch } from "vue";
+import { ref, reactive, onMounted, nextTick, watch, computed } from "vue";
+import { useUiStore } from "@/stores/ui";
 
 import L from "leaflet";
 import { ElMessage, ElNotification } from "element-plus";
@@ -85,11 +89,19 @@ const { network, realTimeNearStop, maxBodyLengthapNameURL, subRouteCity } =
 const loading = ref(false);
 const dataList = ref([]);
 const stopCityList = ref([]);
+
+const allStopCityList = ref([]);
 const activeIndex = ref(null);
 const mapList = ref(null);
 const map = ref(null);
-const markersMap = ref(new Map()); // StopUID -> marker
+const markersMap = ref(new Map()); 
+const stopRefCount = ref(new Map()); 
 const activeMarker = ref(null);
+const showLine = ref([]);
+
+
+const ui = useUiStore();
+
 onMounted(() => {
   init();
 });
@@ -100,6 +112,32 @@ function init() {
   stopCityＭap();
 }
 
+const vaildControl = ref("go");
+
+const handleControl = (e) => {
+  // 切換前先清除現有地圖標記與參考計數，避免殘留不一致的 marker
+  if (map.value) {
+    for (const m of markersMap.value.values()) {
+      try {
+        map.value.removeLayer(m);
+      } catch (err) {}
+    }
+  }
+  markersMap.value.clear();
+  stopRefCount.value = new Map();
+  activeMarker.value = null;
+
+  if (e === "go") {
+    stopCityList.value = allStopCityList.value.filter((item) => item.Direction === 1);
+  } else if (e === "back") {
+    stopCityList.value = allStopCityList.value.filter((item) => item.Direction === 0);
+  } else {
+    stopCityList.value = [...allStopCityList.value];
+  }
+
+  // 重設 showLine（所有路線預設關閉）
+  showLine.value = stopCityList.value.map(() => false);
+};
 function flyToLocation(item, index) {
   activeIndex.value = index;
   // 支援多種傳入格式：整個 stop（含 StopUID/StopID/StopPosition）或僅 StopPosition
@@ -214,15 +252,26 @@ function stopApi() {
   tdxRequest
     .get("/Bus/StopOfRoute/City/Tainan?%24top=30&%24format=JSON")
     .then(function (res) {
-      stopCityList.value = res.data.StopOfRoutes;
-      stopCityList.value.forEach((item) => {
-        item.Stops = item.Stops.map((stop) => ({
-          ...stop,
-        })).sort(
-          (a, b) =>
-            (Number(a.StopSequence) || 0) - (Number(b.StopSequence) || 0)
-        );
+      // 保留原始完整資料
+      allStopCityList.value = res.data.StopOfRoutes || [];
+      allStopCityList.value.forEach((item) => {
+        item.Stops = item.Stops
+          .map((stop) => ({ ...stop }))
+          .sort((a, b) => (Number(a.StopSequence) || 0) - (Number(b.StopSequence) || 0));
       });
+
+      // 根據目前 vaildControl 進行初始過濾（避免修改原始資料）
+      if (vaildControl.value === "go") {
+        stopCityList.value = allStopCityList.value.filter((item) => item.Direction === 1);
+      } else if (vaildControl.value === "back") {
+        stopCityList.value = allStopCityList.value.filter((item) => item.Direction === 0);
+      } else {
+        stopCityList.value = [...allStopCityList.value];
+      }
+
+      // 初始化 showLine（預設全部關閉），並清空參考計數
+      showLine.value = stopCityList.value.map(() => false);
+      stopRefCount.value = new Map();
       console.log(res.data.StopOfRoutes, "res");
       // 在取得 Stops 資料後，若地圖已初始化則加入標記；否則嘗試初始化地圖再加入
       tryAddMarkersFromStops();
@@ -230,41 +279,31 @@ function stopApi() {
     .catch(function (error) {
       console.log(error);
     });
-
-  // .map((stop) => ({
-  //   ...stop,
-  //   // arrivalText: computeArrivalText(stop),
-  // }))
-  // .sort((a, b) => (Number(a.StopSequence) || 0) - (Number(b.StopSequence) || 0));
-  // axios
-  //   .get(
-  //     "https://tdx.transportdata.tw/api/basic/v3/Bus/SubRoute/City/Tainan?%24top=30&%24format=JSON",
-  //     {
-  //       headers: getAuthorizationHeader(),
-  //     }
-  //   )
-  //   .then(function (res) {
-  //     console.log(res, "res");
-  //   })
-  //   .catch(function (error) {
-  //     console.log(error);
-  //   });
 }
 
 function tryAddMarkersFromStops() {
   // 如果地圖尚未建立，先呼叫 stopCityＭap() 進行初始化（它會建立 map）
   if (!map.value) {
     stopCityＭap();
-    // 等下一個 event loop，再嘗試加入標記
-    setTimeout(() => addMarkersFromStops(), 300);
+    // 等下一個 event loop，再嘗試加入標記（僅加入目前開啟的路線）
+    setTimeout(() => addMarkersForOpenRoutes(), 300);
   } else {
-    addMarkersFromStops();
+    addMarkersForOpenRoutes();
   }
 }
 
-function addMarkersFromStops() {
-  if (!map.value || !stopCityList.value) return;
-  // 建立 icons
+function addMarkersForOpenRoutes() {
+  if (!stopCityList.value) return;
+  showLine.value.forEach((val, idx) => {
+    if (val) addMarkersForRoute(idx);
+  });
+}
+
+function addMarkersForRoute(routeIndex) {
+  if (!map.value) return;
+  const route = stopCityList.value[routeIndex];
+  if (!route || !route.Stops) return;
+
   const defaultIcon = L.icon({
     iconUrl,
     iconSize: [28, 36],
@@ -274,38 +313,78 @@ function addMarkersFromStops() {
     shadowSize: [36, 36],
     shadowAnchor: [12, 36],
   });
-  // 逐一處理 StopOfRoutes 裡的 stops
-  stopCityList.value.forEach((route) => {
-    (route.Stops || []).forEach((s) => {
-      const lat =
-        s.StopPosition?.PositionLat ??
-        s.PositionLat ??
-        s.PositionLatitude ??
-        s.Latitude;
-      const lon =
-        s.StopPosition?.PositionLon ??
-        s.PositionLon ??
-        s.PositionLongitude ??
-        s.Longitude;
-      const key =
-        s.StopUID || s.StopID || s.StationUID || s.StationID || `${lat}_${lon}`;
-      if (!lat || !lon) return;
-      if (markersMap.value.has(key)) return; // 已有
-      try {
-        const m = L.marker([Number(lat), Number(lon)], {
-          icon: defaultIcon,
-        }).addTo(map.value);
-        const title = s.StopName?.Zh_tw || s.StopName?.En || s.Name || "停靠站";
-        m.bindTooltip(`<div class='tooltipHTML'>${title}</div>`, {
-          direction: "top",
-          offset: [0, -10],
-          permanent: false,
-        });
-        markersMap.value.set(key, m);
-      } catch (e) {
-        console.error("add marker error", e);
+
+  (route.Stops || []).forEach((s) => {
+    const lat =
+      s.StopPosition?.PositionLat ??
+      s.PositionLat ??
+      s.PositionLatitude ??
+      s.Latitude;
+    const lon =
+      s.StopPosition?.PositionLon ??
+      s.PositionLon ??
+      s.PositionLongitude ??
+      s.Longitude;
+    const key =
+      s.StopUID || s.StopID || s.StationUID || s.StationID || `${lat}_${lon}`;
+    if (!lat || !lon) return;
+
+    // 參考計數：若已存在，僅增加計數
+    const curCount = stopRefCount.value.get(key) || 0;
+    stopRefCount.value.set(key, curCount + 1);
+    if (markersMap.value.has(key)) return;
+
+    try {
+      const m = L.marker([Number(lat), Number(lon)], {
+        icon: defaultIcon,
+      }).addTo(map.value);
+      const title = s.StopName?.Zh_tw || s.StopName?.En || s.Name || "停靠站";
+      m.bindTooltip(`<div class='tooltipHTML'>${title}</div>`, {
+        direction: "top",
+        offset: [0, -10],
+        permanent: false,
+      });
+      markersMap.value.set(key, m);
+    } catch (e) {
+      console.error("add marker error", e);
+    }
+  });
+}
+
+function removeMarkersForRoute(routeIndex) {
+  if (!map.value) return;
+  const route = stopCityList.value[routeIndex];
+  if (!route || !route.Stops) return;
+
+  (route.Stops || []).forEach((s) => {
+    const lat =
+      s.StopPosition?.PositionLat ??
+      s.PositionLat ??
+      s.PositionLatitude ??
+      s.Latitude;
+    const lon =
+      s.StopPosition?.PositionLon ??
+      s.PositionLon ??
+      s.PositionLongitude ??
+      s.Longitude;
+    const key =
+      s.StopUID || s.StopID || s.StationUID || s.StationID || `${lat}_${lon}`;
+    if (!key) return;
+
+    const curCount = stopRefCount.value.get(key) || 0;
+    if (curCount <= 1) {
+      // remove marker
+      const m = markersMap.value.get(key);
+      if (m) {
+        try {
+          map.value.removeLayer(m);
+        } catch (e) {}
+        markersMap.value.delete(key);
       }
-    });
+      stopRefCount.value.delete(key);
+    } else {
+      stopRefCount.value.set(key, curCount - 1);
+    }
   });
 }
 
@@ -377,7 +456,15 @@ function stopCityＭap() {
               highlightMarker(marker, activeIcon, defaultIcon);
               map.value.setView([lat, lon], 16);
             });
-            markersMap.value.set(s.StopUID || s.StopID, marker);
+            const key =
+              s.StopUID ||
+              s.StopID ||
+              s.StationUID ||
+              s.StationID ||
+              `${lat}_${lon}`;
+            markersMap.value.set(key, marker);
+            // 設定參考計數，避免後續被誤移除
+            stopRefCount.value.set(key, (stopRefCount.value.get(key) || 0) + 1);
             bounds.push([lat, lon]);
           }
         });
@@ -445,7 +532,7 @@ function stopCityＭap() {
   };
 
   // 監聽 activeIndex 的變化，當側邊切換站點時也更新地圖標記
-  // 由於是 script setup，可以用 watch (動態載入)
+
   import("vue").then(({ watch }) => {
     watch(activeIndex, (newIdx) => {
       const item = stopCityList.value[newIdx];
@@ -455,45 +542,56 @@ function stopCityＭap() {
     });
   });
 
-  // 备用：若要使用 API 抓取遠端 stops，可在此打開
-  // tdxRequest.get('/Bus/Stop/City/Tainan?%24top=30&%24format=JSON')
-  //   .then(function (res) {
-  //     mapList.value = res.data;
-  //   })
-  //   .catch(function (error) {
-  //     console.log(error);
-  //   });
+ 
+  tdxRequest
+    .get("/Bus/Stop/City/Tainan?%24top=30&%24format=JSON")
+    .then(function (res) {
+      mapList.value = res.data;
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
 }
-function computeArrivalText(item) {
-  // 若 API 提供 EstimateTime（單位：秒），直接顯示分鐘
-  if (item.EstimateTime !== undefined && item.EstimateTime !== null) {
-    const seconds = Number(item.EstimateTime);
-    if (!isNaN(seconds)) {
-      if (seconds <= 0) return "即將到站";
-      const mins = Math.ceil(seconds / 60);
-      return `${mins} 分鐘`;
-    }
-  }
 
-  // 否則以最近資料時間做為 fallback（顯示更新多久前與車上時間）
-  try {
-    const now = new Date();
-    const srcRec = item.SrcRecTime ? new Date(item.SrcRecTime) : null;
-    const trans = item.TransTime ? new Date(item.TransTime) : null;
-    if (srcRec) {
-      const ageSec = Math.floor((now - srcRec) / 1000);
-      if (ageSec < 60) return `更新 ${ageSec} 秒前`;
-      const ageMin = Math.floor(ageSec / 60);
-      const timeStr = trans
-        ? `（ ${directionText(item.Direction)} ${trans.toLocaleTimeString()}）`
-        : "";
-      return `更新 ${ageMin} 分鐘前${timeStr}`;
+function toggleShowLine(index) {
+  // 切換顯示並新增/移除該路線的標記
+  showLine.value[index] = !showLine.value[index];
+  if (showLine.value[index]) {
+    // 若地圖尚未建立，先建立再加標記
+    if (!map.value) {
+      stopCityＭap();
+      setTimeout(() => addMarkersForRoute(index), 300);
+    } else {
+      addMarkersForRoute(index);
     }
-  } catch (e) {
-    // ignore
+  } else {
+    removeMarkersForRoute(index);
   }
+}
 
-  return "無預估時間";
+// 轉換 BoardingType 成可讀文字（TDX 回傳可能為數字或字串）
+function boardingTypeText(val) {
+  if (val === undefined || val === null || val === "") return "";
+  const v = String(val);
+  // 常見對應：0/空: 可上下車；1: 僅下車；2: 僅上車；3: 不停靠
+  if (v === "0" || v === "" || v.toLowerCase() === "null") return "可上下車";
+  switch (v) {
+    case "1":
+      return "僅下車";
+    case "2":
+      return "僅上車";
+    case "3":
+      return "不停靠";
+    default:
+      return v;
+  }
+}
+
+// 判斷是否為分段點（IsSectionPoint 可能為 boolean、0/1 或字串）
+function isSectionPoint(val) {
+  if (val === true) return true;
+  const v = String(val).toLowerCase();
+  return v === "1" || v === "true";
 }
 
 function directionText(direction) {
@@ -518,7 +616,7 @@ function colorStyle(index) {
 
 .text-unit {
   color: #767676;
-  font-size: 18px;
+  font-size: 14px;
 }
 
 .eta-text {
@@ -581,15 +679,17 @@ body,
   border-right: 1px solid #dcdfe6;
   display: flex;
   flex-direction: column;
-  z-index: 500;
+  z-index: 100;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   position: fixed;
   top: 1rem;
-  left: 1rem;
+  left: 5rem;
   height: 95%;
   border-radius: var(--el-border-radius-base);
   overflow: hidden;
   width: 378px;
+  transform: translateX(-465px);
+  transition: transform 0.28s ease;
   @media (max-width: 575px) {
     height: 50%;
     top: 50%;
@@ -597,6 +697,10 @@ body,
     left: 0;
     width: 100%;
   }
+}
+
+.sidebar.active {
+  transform: translateX(0);
 }
 
 .sidebar-header {
@@ -614,9 +718,17 @@ body,
     margin: 0;
   }
 }
-
+.control-container {
+    padding: 5px 9px;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    border-bottom: solid #ddd thin;
+}
 .list-container {
   padding: 10px;
+  display: grid;
+  gap: 4px;
 }
 
 .location-card {
@@ -656,6 +768,12 @@ body,
   align-items: center;
 }
 
+:deep(.leaflet-left .leaflet-control) {
+  position: fixed;
+  right: 1rem;
+  bottom: 2rem;
+}
+
 :deep(.leaflet-tooltip) {
   padding: 6px 10px;
   border-radius: var(--el-border-radius-base);
@@ -666,13 +784,6 @@ body,
 :deep(.leaflet-pane.leaflet-overlay-pane path) {
   stroke: #36bb74;
   fill: #28b369;
-}
-
-:deep(.leaflet-left .leaflet-control) {
-  margin-left: 376px;
-  @media (max-width: 575px) {
-    margin-left: 10px;
-  }
 }
 
 :deep(.leaflet-bar a) {
@@ -749,9 +860,10 @@ body,
 }
 
 .label_style {
-  font-size: 20px;
+  font-size: 16px;
   color: #000;
   font-weight: 500;
+  cursor: pointer;
 }
 .span__style {
   font-size: 13px;
@@ -782,10 +894,30 @@ body,
     background: rgb(136 199 165 / 13%);
     cursor: pointer;
   }
-  &.active{
+  &.active {
     border: solid #408660 thin;
     box-shadow: 0 0 5px #88c7a5;
     background: rgb(136 199 165 / 13%);
   }
+}
+
+.stop-name {
+  margin: 0 6px;
+  color: #333;
+}
+
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+  background: #f0f0f0;
+  color: #333;
+  border-radius: 10px;
+}
+
+.badge.section {
+  background: #ffe9b3;
+  color: #6b4b00;
 }
 </style>
