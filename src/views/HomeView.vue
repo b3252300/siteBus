@@ -104,6 +104,7 @@ const ui = useUiStore();
 
 onMounted(() => {
   init();
+
 });
 
 function init() {
@@ -247,13 +248,10 @@ function networkApi() {
 }
 
 function stopApi() {
-  // 將即時資料加入 arrivalText，優先使用 EstimateTime（若有）
-  // stopCityList.value = maxBodyLengthapNameURL.data.StopOfRoutes;
-  tdxRequest
-    .get("/Bus/StopOfRoute/City/Tainan?%24top=30&%24format=JSON")
-    .then(function (res) {
-      // 保留原始完整資料
-      allStopCityList.value = res.data.StopOfRoutes || [];
+
+  // 呼叫 stopOfRouteApi，並在取得資料後進行後續處理
+  stopOfRouteApi()
+    .then(() => {
       allStopCityList.value.forEach((item) => {
         item.Stops = item.Stops
           .map((stop) => ({ ...stop }))
@@ -272,13 +270,13 @@ function stopApi() {
       // 初始化 showLine（預設全部關閉），並清空參考計數
       showLine.value = stopCityList.value.map(() => false);
       stopRefCount.value = new Map();
-      console.log(res.data.StopOfRoutes, "res");
       // 在取得 Stops 資料後，若地圖已初始化則加入標記；否則嘗試初始化地圖再加入
       tryAddMarkersFromStops();
     })
-    .catch(function (error) {
-      console.log(error);
+    .catch((err) => {
+      console.error("stopOfRouteApi error", err);
     });
+
 }
 
 function tryAddMarkersFromStops() {
@@ -592,6 +590,21 @@ function isSectionPoint(val) {
   if (val === true) return true;
   const v = String(val).toLowerCase();
   return v === "1" || v === "true";
+}
+function stopOfRouteApi(){
+  // 將即時資料加入 arrivalText，並回傳 promise 讓呼叫端可以等待完成
+  return tdxRequest
+    .get("/Bus/StopOfRoute/City/Tainan?%24top=30&%24format=JSON")
+    .then(function (res) {
+      // 保留原始完整資料
+      allStopCityList.value = res.data.StopOfRoutes || [];
+      return res;
+    })
+    .catch(function (error) {
+      console.log(error);
+      // 重新拋出，以便呼叫端可以處理錯誤
+      throw error;
+    });
 }
 
 function directionText(direction) {

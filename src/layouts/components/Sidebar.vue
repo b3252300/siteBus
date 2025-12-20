@@ -6,7 +6,7 @@
               <span class="material-symbols-outlined"> search_insights </span>
         </div>
       
-        <div>查詢站點</div>
+        <div>路線站序</div>
       </div>
     </div>
   </div>
