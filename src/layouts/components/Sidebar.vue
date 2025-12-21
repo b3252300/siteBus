@@ -10,7 +10,8 @@
       </div>
       <div class="menu-list__item" @click="handleMapSearchOpen">
         <div class="menu-list__icon">
-              <span class="material-symbols-outlined"> search_insights </span>
+      <span class="material-symbols-outlined"> explore_nearby </span>
+
         </div>
       
         <div>站位查詢</div>
@@ -22,22 +23,22 @@
 
 import router from "@/router";
 import { useUiStore } from "@/stores/ui";
-
+  const sidebar = useUiStore();
 const handleOpen = () => {
-  const ui = useUiStore();
+
   // 呼叫 store 的 action 來開啟側欄
   router.push({ path: "/map" });
-  if(!ui.sidebarOpen){
-  ui.openSidebar();
+  if(!sidebar.sidebarOpen){
+  sidebar.openSidebar();
   }
 
 
 };
 const handleMapSearchOpen =()=>{
-  const ui = useUiStore();
+
   // 呼叫 store 的 action 來開啟側欄
   router.push({ path: "/mapSearch" });
-  //ui.toggleSidebar();
+  sidebar.toggleSidebar();
 }
 </script>
 <style scoped lang="scss">
