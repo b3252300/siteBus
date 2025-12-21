@@ -8,6 +8,13 @@
       
         <div>路線站序</div>
       </div>
+      <div class="menu-list__item" @click="handleMapSearchOpen">
+        <div class="menu-list__icon">
+              <span class="material-symbols-outlined"> search_insights </span>
+        </div>
+      
+        <div>站位查詢</div>
+      </div>
     </div>
   </div>
 </template>
@@ -15,12 +22,22 @@
 
 import { useUiStore } from "@/stores/ui";
 
-const handleOpen = (event) => {
+const handleOpen = () => {
   const ui = useUiStore();
   // 呼叫 store 的 action 來開啟側欄
-  ui.toggleSidebar();
-};
+  router.push({ path: "/map" });
+  if(!ui.sidebarOpen){
+  ui.openSidebar();
+  }
 
+
+};
+const handleMapSearchOpen =()=>{
+  const ui = useUiStore();
+  // 呼叫 store 的 action 來開啟側欄
+  router.push({ path: "/mapSearch" });
+  //ui.toggleSidebar();
+}
 </script>
 <style scoped lang="scss">
 .sidebar-container {
@@ -38,6 +55,7 @@ const handleOpen = (event) => {
   display: grid;
   justify-content: center;
   padding-top: 3rem;
+      gap: 1.6rem;
 }
 .menu-list__item {
   text-align: center;
