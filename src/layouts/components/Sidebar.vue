@@ -20,6 +20,7 @@
 </template>
 <script lang="ts" setup>
 
+import router from "@/router";
 import { useUiStore } from "@/stores/ui";
 
 const handleOpen = () => {

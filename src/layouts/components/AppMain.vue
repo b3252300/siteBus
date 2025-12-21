@@ -29,4 +29,12 @@
     name: 'AppMain',
   });
 </script>
+<style scoped lang="scss">
+.app-main {
+    height: 100vh;
+    padding-left: 72px;
+}
+
+
+</style>
 

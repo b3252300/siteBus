@@ -12,3 +12,8 @@
 import { AppMain, Sidebar } from './components'
 
 </script>
+<style scoped lang="scss">
+
+
+    
+</style>

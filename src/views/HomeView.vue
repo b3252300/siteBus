@@ -1,28 +1,29 @@
 <template>
-  <div class="app-container">
-    <el-container
-      class="main-layout"
-      :class="{ sidebarOpenActive: ui.sidebarOpen }"
-    >
-      <div class="sidebar" :class="{ active: ui.sidebarOpen }">
-
-        <div class="title-container" v-for="item in dataList.Networks">
-    
-     
+  <div class="map-container">
+    <el-container class="main-layout">
+      <div class="sidebar" :class="{ active: sidebar.sidebarOpen }">
+        <div
+          class="title-container"
+          v-for="item in title.Networks"
+          :key="item.SubRouteUID"
+        >
           <h2 class="title-container__lable">{{ item.NetworkName.Zh_tw }}</h2>
           <div class="title-container_sublable">{{ item.NetworkName.En }}</div>
         </div>
-<div class="control-container">
-    <el-radio-group v-model="vaildControl"  fill="#3e835e" @change="handleControl" size="small">
-      <el-radio-button label="去程" value="go" />
-      <el-radio-button label="往返" value="back" />
- 
-    </el-radio-group>
+        <div class="control-container">
+          <el-radio-group
+            v-model="vaildControl"
+            fill="#3e835e"
+            @change="handleControl"
+            size="small"
+          >
+            <el-radio-button label="去程" value="go" />
+            <el-radio-button label="往返" value="back" />
+          </el-radio-group>
+        </div>
 
-</div>
- 
-        <el-scrollbar>
-          <div v-loading="loading" class="list-container">
+        <el-scrollbar v-loading="loading">
+          <div  class="list-container">
             <el-empty
               v-if="!loading && stopCityList.length === 0"
               description="附近無資料"
@@ -71,8 +72,9 @@
 
 <script setup>
 import { ref, reactive, onMounted, nextTick, watch, computed } from "vue";
+import { ElLoading } from "element-plus";
 import { useUiStore } from "@/stores/ui";
-
+import { useDataStore } from "@/stores/data";
 import L from "leaflet";
 import { ElMessage, ElNotification } from "element-plus";
 import axios from "axios";
@@ -82,35 +84,44 @@ import iconRetinaUrl from "@/assets/Vector-icon-2x.png?url";
 import shadowUrl from "@/assets/Vector-shadow.png?url";
 import Search from "@/assets/search.svg?component";
 import { useAuthStore } from "@/stores/auth";
-import { fetchTainanBusNetwork } from "@/utils/bus";
+
 import tdxRequest from "@/api/tdxApi";
+import { fetchTainanBusNetwork } from "@/utils/bus";
 const { network, realTimeNearStop, maxBodyLengthapNameURL, subRouteCity } =
   fetchTainanBusNetwork();
-const loading = ref(false);
-const dataList = ref([]);
-const stopCityList = ref([]);
 
+let title = ref([]);
+const stopCityList = ref([]);
+const loading = ref(true);
 const allStopCityList = ref([]);
 const activeIndex = ref(null);
 const mapList = ref(null);
 const map = ref(null);
-const markersMap = ref(new Map()); 
-const stopRefCount = ref(new Map()); 
+const markersMap = ref(new Map());
+const stopRefCount = ref(new Map());
 const activeMarker = ref(null);
 const showLine = ref([]);
 
+const { networkApi } = useDataStore();
 
-const ui = useUiStore();
+const sidebar = useUiStore();
 
 onMounted(() => {
   init();
-
 });
 
 function init() {
-  networkApi();
-  stopApi();
-  stopCityＭap();
+  try {
+    stopApi();
+    stopCityＭap();
+    networkApi().then((res) => {
+      title.value = res;
+    });
+  } catch (e) {
+    console.error(e);
+  }finally {
+    loading.value = false;
+  }
 }
 
 const vaildControl = ref("go");
@@ -129,9 +140,13 @@ const handleControl = (e) => {
   activeMarker.value = null;
 
   if (e === "go") {
-    stopCityList.value = allStopCityList.value.filter((item) => item.Direction === 1);
+    stopCityList.value = allStopCityList.value.filter(
+      (item) => item.Direction === 1
+    );
   } else if (e === "back") {
-    stopCityList.value = allStopCityList.value.filter((item) => item.Direction === 0);
+    stopCityList.value = allStopCityList.value.filter(
+      (item) => item.Direction === 0
+    );
   } else {
     stopCityList.value = [...allStopCityList.value];
   }
@@ -235,34 +250,40 @@ function flyToLocation(item, index) {
   ElMessage.warning("該地點無經緯度資訊");
 }
 
-function networkApi() {
-  //dataList.value = network.data;
-  tdxRequest
-    .get("/Bus/Network/City/Tainan?%24top=30&%24format=JSON")
-    .then(function (res) {
-      dataList.value = res.data;
-    })
-    .catch(function (error) {
-      console.log(error);
-    });
-}
+// function networkApi() {
+//   //title.value = network.data;
+
+//   console.log(title.value.length>0,"fffff");
+//   tdxRequest
+//     .get("/Bus/Network/City/Tainan?%24top=30&%24format=JSON")
+//     .then(function (res) {
+//       title.value = res.data;
+//     })
+//     .catch(function (error) {
+//       console.log(error);
+//     });
+// }
 
 function stopApi() {
-
   // 呼叫 stopOfRouteApi，並在取得資料後進行後續處理
   stopOfRouteApi()
     .then(() => {
       allStopCityList.value.forEach((item) => {
-        item.Stops = item.Stops
-          .map((stop) => ({ ...stop }))
-          .sort((a, b) => (Number(a.StopSequence) || 0) - (Number(b.StopSequence) || 0));
+        item.Stops = item.Stops.map((stop) => ({ ...stop })).sort(
+          (a, b) =>
+            (Number(a.StopSequence) || 0) - (Number(b.StopSequence) || 0)
+        );
       });
 
       // 根據目前 vaildControl 進行初始過濾（避免修改原始資料）
       if (vaildControl.value === "go") {
-        stopCityList.value = allStopCityList.value.filter((item) => item.Direction === 1);
+        stopCityList.value = allStopCityList.value.filter(
+          (item) => item.Direction === 1
+        );
       } else if (vaildControl.value === "back") {
-        stopCityList.value = allStopCityList.value.filter((item) => item.Direction === 0);
+        stopCityList.value = allStopCityList.value.filter(
+          (item) => item.Direction === 0
+        );
       } else {
         stopCityList.value = [...allStopCityList.value];
       }
@@ -276,7 +297,6 @@ function stopApi() {
     .catch((err) => {
       console.error("stopOfRouteApi error", err);
     });
-
 }
 
 function tryAddMarkersFromStops() {
@@ -540,7 +560,6 @@ function stopCityＭap() {
     });
   });
 
- 
   tdxRequest
     .get("/Bus/Stop/City/Tainan?%24top=30&%24format=JSON")
     .then(function (res) {
@@ -591,7 +610,7 @@ function isSectionPoint(val) {
   const v = String(val).toLowerCase();
   return v === "1" || v === "true";
 }
-function stopOfRouteApi(){
+function stopOfRouteApi() {
   // 將即時資料加入 arrivalText，並回傳 promise 讓呼叫端可以等待完成
   return tdxRequest
     .get("/Bus/StopOfRoute/City/Tainan?%24top=30&%24format=JSON")
@@ -614,323 +633,3 @@ function colorStyle(index) {
   return index === activeIndex.value;
 }
 </script>
-
-<style lang="scss" scoped>
-:root {
-  --el-text-color-primary: #767676;
-  --el-text-color-placeholder: #408560;
-  --el-color-success: #408560;
-}
-
-.el-input {
-  --el-border-radius-base: 8px;
-  --el-input-bg-color: #e9f4ee;
-}
-
-.text-unit {
-  color: #767676;
-  font-size: 14px;
-}
-
-.eta-text {
-  margin-top: 6px;
-  font-size: 14px;
-  color: #408560;
-}
-
-html,
-body,
-#app {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  font-family: "Noto Sans TC", sans-serif;
-}
-
-.app-container {
-  height: 100vh;
-  width: 100vw;
-  position: relative;
-}
-.title-container {
-  padding: 0.4rem 0;
-  text-align: center;
-  background: #88c6a5;
-}
-.title-container__lable {
-  font-size: 18px;
-  font-weight: bolder;
-}
-.title-container_sublable {
-  font-size: 14px;
-  color: #404040;
-}
-.search {
-  background: #72af8f;
-  color: #408560;
-  padding: 1rem 1rem;
-  svg {
-    width: 1.2rem;
-    height: 1.2rem;
-  }
-  :deep(.el-input-group__append) {
-    padding: 0 13px;
-    background-color: #e9f4ef;
-    box-shadow: none;
-  }
-  :deep(.el-input__wrapper) {
-    box-shadow: none;
-  }
-}
-
-.main-layout {
-  height: 100%;
-}
-
-.sidebar {
-  background: #fff;
-  border-right: 1px solid #dcdfe6;
-  display: flex;
-  flex-direction: column;
-  z-index: 100;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  position: fixed;
-  top: 1rem;
-  left: 5rem;
-  height: 95%;
-  border-radius: var(--el-border-radius-base);
-  overflow: hidden;
-  width: 378px;
-  transform: translateX(-465px);
-  transition: transform 0.28s ease;
-  @media (max-width: 575px) {
-    height: 50%;
-    top: 50%;
-    position: absolute;
-    left: 0;
-    width: 100%;
-  }
-}
-
-.sidebar.active {
-  transform: translateX(0);
-}
-
-.sidebar-header {
-  padding: 0.4rem 1rem;
-  background: #444444;
-  color: white;
-  @media (max-width: 575px) {
-    padding: 5px 15px;
-  }
-}
-
-.sidebar-header h3 {
-  margin: 0 0 5px 0;
-  @media (max-width: 575px) {
-    margin: 0;
-  }
-}
-.control-container {
-    padding: 5px 9px;
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    border-bottom: solid #ddd thin;
-}
-.list-container {
-  padding: 10px;
-  display: grid;
-  gap: 4px;
-}
-
-.location-card {
-  margin-bottom: 10px;
-  cursor: pointer;
-  transition: transform 0.2s;
-  &.active {
-    border: solid #408660 thin;
-    box-shadow: 0 0 5px #88c7a5;
-    background: rgb(136 199 165 / 13%);
-  }
-}
-
-.location-card:hover {
-  transform: translateY(-2px);
-}
-
-.card-content {
-  display: flex;
-  gap: 10px;
-}
-
-.location-img {
-  width: 60px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: var(--el-border-radius-base);
-}
-
-.location-info {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-
-  font-weight: bolder;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-:deep(.leaflet-left .leaflet-control) {
-  position: fixed;
-  right: 1rem;
-  bottom: 2rem;
-}
-
-:deep(.leaflet-tooltip) {
-  padding: 6px 10px;
-  border-radius: var(--el-border-radius-base);
-  color: var(--el-text-color-primary);
-  filter: drop-shadow(2px 4px 6px rgba(131, 86, 37, 0.66));
-}
-
-:deep(.leaflet-pane.leaflet-overlay-pane path) {
-  stroke: #36bb74;
-  fill: #28b369;
-}
-
-:deep(.leaflet-bar a) {
-  background-color: #fff;
-  border-bottom: 1px solid #ccc;
-  width: 26px;
-  height: 26px;
-  line-height: 26px;
-  display: block;
-  text-align: center;
-  text-decoration: none;
-  color: #397755;
-}
-
-.map-wrapper {
-  height: 100%;
-  width: 100%;
-  padding: 0 !important;
-  position: relative;
-  @media (max-width: 575px) {
-    height: 50%;
-  }
-}
-
-#map {
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-}
-
-.user-location-tooltip {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-
-.user-location-tooltip::before {
-  display: none;
-}
-
-::v-deep {
-  .el-divider__text {
-    white-space: nowrap;
-  }
-  .el-card__body {
-    padding: 10px;
-  }
-  .tooltipHTML {
-    padding: 0;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    justify-content: center;
-  }
-  .tooltipHTML__img {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    width: auto;
-    img {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      border: solid #de9848 3px;
-      box-shadow: 2px 2px 9px rgb(131 86 37 / 66%);
-      background: #fff;
-      padding: 3px;
-    }
-  }
-}
-
-.el-tag--large {
-  --el-tag-font-size: 16px;
-}
-
-.label_style {
-  font-size: 16px;
-  color: #000;
-  font-weight: 500;
-  cursor: pointer;
-}
-.span__style {
-  font-size: 13px;
-
-  color: #000;
-  line-height: 1.4;
-  width: 100%;
-}
-
-.el-button {
-  border-radius: var(--el-border-radius-base);
-}
-.stop__line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.stop__line > .location-top {
-  white-space: nowrap;
-  position: relative;
-
-  border: solid #ddd thin;
-  padding: 0px 5px;
-  border-radius: 3px;
-  &:hover {
-    border: solid #408660 thin;
-    box-shadow: 0 0 5px #88c7a5;
-    background: rgb(136 199 165 / 13%);
-    cursor: pointer;
-  }
-  &.active {
-    border: solid #408660 thin;
-    box-shadow: 0 0 5px #88c7a5;
-    background: rgb(136 199 165 / 13%);
-  }
-}
-
-.stop-name {
-  margin: 0 6px;
-  color: #333;
-}
-
-.badge {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 2px 6px;
-  font-size: 12px;
-  background: #f0f0f0;
-  color: #333;
-  border-radius: 10px;
-}
-
-.badge.section {
-  background: #ffe9b3;
-  color: #6b4b00;
-}
-</style>
