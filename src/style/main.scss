@@ -3,7 +3,10 @@
   --el-text-color-placeholder: #408560;
   --el-color-success: #408560;
 }
+.el-link {
 
+    --el-link-hover-text-color: var(--el-color-success);
+}
 .el-input {
   --el-border-radius-base: 8px;
   --el-input-bg-color: #e9f4ee;
@@ -12,6 +15,9 @@
 .text-unit {
   color: #767676;
   font-size: 14px;
+}
+.text-red{
+  color: #ff2807;
 }
 
 .eta-text {
@@ -131,6 +137,12 @@ body,
   height: 100%;
 }
 
+.main-container {
+    max-width: 1170px;
+   margin: 3rem auto;
+    width: 100%;
+    padding: 0 1rem;
+}
 .leaflet-left .leaflet-control {
   position: fixed;
   right: 1rem;
@@ -211,10 +223,26 @@ body,
 }
 
 .label_style {
-  font-size: 16px;
-  color: #000;
-  font-weight: 500;
-  cursor: pointer;
+    font-size: 16px;
+    color: #000;
+    font-weight: 500;
+    cursor: pointer;
+
+}
+.card-content__item {
+    border-bottom: solid #ddd thin;
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+}
+.card-content__lable {
+    font-size: 16px;
+    color: #000;
+    font-weight: 500;
+    cursor: pointer;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    display: flex;
+    gap: 8px;
 }
 .span__style {
   font-size: 13px;
@@ -298,6 +326,10 @@ body,
 .card-content {
   display: flex;
   gap: 10px;
+  width: 100%;
+  .el-card__body{
+     width: 100%;
+  }
 }
 
 .location-img {
@@ -328,7 +360,7 @@ body,
 }
 .controlStatus-container {
   display: grid;
-  padding: 10px;
+ margin-top: 10px;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
   text-align: center;

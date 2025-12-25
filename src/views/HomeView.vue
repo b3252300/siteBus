@@ -4,7 +4,7 @@
       <div class="sidebar" :class="{ active: sidebar.sidebarOpen }">
         <div
           class="title-container"
-          v-for="item in title.Networks"
+          v-for="item in title?.Networks"
           :key="item.SubRouteUID"
         >
           <h2 class="title-container__lable">{{ item.NetworkName.Zh_tw }}</h2>
@@ -77,13 +77,11 @@ import { useUiStore } from "@/stores/ui";
 import { useDataStore } from "@/stores/data";
 import L from "leaflet";
 import { ElMessage, ElNotification } from "element-plus";
-import axios from "axios";
-import { LocationFilled } from "@element-plus/icons-vue";
+
 import iconUrl from "@/assets/Vector-icon.png?url";
 import iconRetinaUrl from "@/assets/Vector-icon-2x.png?url";
 import shadowUrl from "@/assets/Vector-shadow.png?url";
-import Search from "@/assets/search.svg?component";
-import { useAuthStore } from "@/stores/auth";
+
 
 import tdxRequest from "@/api/tdxApi";
 import { fetchTainanBusNetwork } from "@/utils/bus";

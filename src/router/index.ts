@@ -28,6 +28,18 @@ const router = createRouter({
           component: () => import("@/views/ＭapSearch.vue"),
           meta: { requiresAuth: false },
         },
+         {
+          path: "/explain",
+          name: "explain",
+          component: () => import("@/views/ExplainView.vue"),
+          meta: { requiresAuth: false },
+        },
+         {
+          path: "/explain/news/:NewsID",
+          name: "explainNews",
+          component: () => import("@/views/ExplainContentView.vue"),
+          meta: { requiresAuth: false },
+        },
       ],
     },
   ],
