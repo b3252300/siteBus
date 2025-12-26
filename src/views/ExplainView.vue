@@ -1,32 +1,66 @@
 <template>
-  
-    <div class="main-container">
-        <el-descriptions title="公車最新消息" column="1" border>
+    <MapLayout width="500px">
+
+        <template #sidebar>
+            <BusSidebar>
+                <template #top>
+                    <div ref="titleRef"  class="title-container__label" style="padding: 10px 10px 0;">公車最新消息</div>
+                </template>
+               
+                <el-scrollbar  :style="{'height':customHeight}">
+             
+                    <el-empty v-if="!load.loading && dataList.length === 0" description="無資料" />
+                    <el-descriptions column="1" border>
+                        <el-descriptions-item :label="GetDateYYYYMMDD(item.SrcUpdateTime)"
+                            v-for="(item, index) in dataList" :key="item.NewsID">
+                            <div style="display: flex; gap:8px; align-items: center;"
+                                :class="{ 'descriptions__active': showNewsContent[index] }">
+                                <el-link @click="handleNews(item, index)">{{ item.Title }}</el-link>
+                                <el-tag size="small" type="success">{{ item.Department }}</el-tag>
+                            </div>
+
+                        </el-descriptions-item>
+
+                    </el-descriptions>
+                </el-scrollbar>
 
 
-            <el-descriptions-item :label="GetDateYYYYMMDD(item.SrcUpdateTime)" v-for="item in dataList"
-                :key="item.NewsID">
-                <div style="display: flex; gap:8px; align-items: center;">
-                    <el-link target="_blank"  @click="handleNews(item)">{{ item.Title }}</el-link>
-                    <el-tag size="small" type="success">{{ item.Department }}</el-tag>
-                </div>
+            </BusSidebar>
+        </template>
+        <div v-show="dataItem" class="news-container">
+            <el-scrollbar class="scrollbar-content">
+            <h2 class="page-title">{{ dataItem?.Newses[0].Title }}</h2>
+            <div v-show="showNewsContent.length > 0" v-html="dataItem?.Newses[0].Description" />
 
-            </el-descriptions-item>
-
-        </el-descriptions>
-    </div>
+            <el-link :href="dataItem?.Newses[0].NewsURL" target="_blank">相關連結</el-link>
+            </el-scrollbar>
+        </div>
+        <template #map>
+            <LeafletMap ref="mapRef" />
+        </template>
+    </MapLayout>
 
 </template>
 <script lang="ts" setup>
-import { ref, onMounted, reactive } from "vue";
+import { ref, onMounted, reactive, onUnmounted, nextTick } from "vue";
+import MapLayout from "@/layouts/components/MapLayout.vue";
+import LeafletMap from "@/components/map/LeafletMap.vue";
+import BusSidebar from "@/components/bus/BusSidebar.vue";
 import useDate from "@/utils/date"
 import tdxRequest from "@/api/tdxApi";
 import { useRouter } from "vue-router";
+import { useLoadingStore } from "@/stores/useLoading"
+import { fetchTainanBusNetwork } from "@/utils/bus";
+const { newslist } = fetchTainanBusNetwork();
+
+const load = useLoadingStore();
+
 const router = useRouter();
 const { GetDateYYYYMMDD } = useDate();
-
+const mapRef = ref<InstanceType<typeof LeafletMap> | null>(null);
 const loading = ref(false);
 const dataList = ref<string[]>([]);
+const dataItem = ref(null);
 
 onMounted(() => {
     init();
@@ -34,7 +68,7 @@ onMounted(() => {
 
 async function init() {
     try {
-        loading.value = true;
+        load.openLoading();
         const initialLoadPromises = [
             fetchBusNews(),
 
@@ -44,31 +78,42 @@ async function init() {
     } catch (e) {
         console.error(e);
     } finally {
-        loading.value = false;
+        load.closeLoading();
     }
 
 }
 
 
-
-const handleNews = (item) => {
+const showNewsContent = ref<boolean[]>([]);
+const handleNews = (item, index) => {
     console.log(item.NewsID);
-    router.push({
-        name: "explainNews",
-        params: { NewsID: item.NewsID },
-        // 使用 history.state 傳整個物件，這樣不會顯示在 URL
-        state: { item },
-    });
+    showNewsContent.value = []
+    if (item) {
+        showNewsContent.value[index] = true;
+        fetchBusNewsItem(item.NewsID);
+
+    }
+
+    // router.push({
+    //     name: "explainNews",
+    //     params: { NewsID: item.NewsID },
+    //     // 使用 history.state 傳整個物件，這樣不會顯示在 URL
+    //     state: { item },
+    // });
 };
 
 function fetchBusNews() {
+
     tdxRequest
         .get(
             `/Bus/News/City/Tainan?%24top=30&%24format=JSON`
         )
         .then((res) => {
             console.log(res);
-            dataList.value = res.data.Newses
+            // dataList.value = res.data.Newses;
+               console.log(newslist, "newslist");
+            dataList.value = newslist.data.Newses;
+            
 
         })
         .catch((err) => {
@@ -76,9 +121,46 @@ function fetchBusNews() {
         });
 }
 
+function fetchBusNewsItem(NewsID) {
+    tdxRequest.get(`/Bus/News/City/Tainan?$filter=contains(NewsID, '${NewsID}')&$format=JSON`).then((res) => {
+        dataItem.value = res.data || null;
+    });
+}
 
 
+// 1. 修正初始化型別
+const titleRef = ref<HTMLElement | null>(null); 
+const customHeight = ref("100vh"); // 給予一個初始預設值
 
+const updateScrollbarHeight = () => {
+    // 2. 增加安全檢查，確保 titleRef.value 存在
+    if (titleRef.value) {
+        const rect = titleRef.value.getBoundingClientRect().height;
+        // 考慮到你的 layout 結構，可能需要減去 padding 或其他偏移量
+        customHeight.value = `calc(95vh - ${rect}px - 20px)`;
+    }
+};
 
+onMounted(async () => {
+    await nextTick();
+    
+    // 初始化一次
+    updateScrollbarHeight();
+
+    // 3. ResizeObserver 邏輯
+    const observer = new ResizeObserver(() => {
+        updateScrollbarHeight();
+    });
+
+    if (titleRef.value) {
+        observer.observe(titleRef.value);
+    }
+
+    // 在組件銷毀時停止監聽，防止內存洩漏
+    onUnmounted(() => {
+        observer.disconnect();
+    });
+});
 
 </script>
+

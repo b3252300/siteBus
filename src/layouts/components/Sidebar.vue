@@ -17,8 +17,15 @@
 
         <div>站位查詢</div>
       </div>
+       <div class="menu-list__item" @click="handleExplainOpen">
+            <div class="menu-list__icon">
+              <span class="material-symbols-outlined">layers</span>
 
-      <el-popover placement="right" :width="150" trigger="click">
+            </div>
+
+            <div>其他資訊</div>
+          </div>
+      <!-- <el-popover placement="right" :width="150" trigger="click">
         <template #reference>
           <div class="menu-list__item" @click="handleExplainOpen">
             <div class="menu-list__icon">
@@ -30,7 +37,7 @@
           </div>
         </template>
 
-      </el-popover>
+      </el-popover> -->
 
 
     </div>

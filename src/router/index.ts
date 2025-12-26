@@ -7,7 +7,7 @@ const router = createRouter({
     {
       path: "/",
       name: "home",
-      redirect: "/map",
+      redirect: "/mapRoute",
       component: Layout,
       children: [
         {
@@ -16,18 +16,18 @@ const router = createRouter({
           component: () => import("@/views/LoginView.vue"),
         
         },
-        {
-          path: "/map",
-          name: "map",
-          component: () => import("@/views/HomeView.vue"),
-          meta: { requiresAuth: false },
-        },
-         {
-          path: "/test",
-          name: "test",
-          component: () => import("@/views/ＭapSearch.vue"),
-          meta: { requiresAuth: false },
-        },
+        // {
+        //   path: "/map",
+        //   name: "map",
+        //   component: () => import("@/views/HomeView.vue"),
+        //   meta: { requiresAuth: false },
+        // },
+        //  {
+        //   path: "/test",
+        //   name: "test",
+        //   component: () => import("@/views/ＭapSearch.vue"),
+        //   meta: { requiresAuth: false },
+        // },
         {
           path: "/mapSearch",
           name: "mapSearch",
