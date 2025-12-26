@@ -3,22 +3,28 @@
 
         <template #sidebar>
             <BusSidebar>
-
-                <el-scrollbar v-loading="loading" style="padding:10px">
-                    <div class="control-container">
+                <template #top>
+                    <div ref="controlRef" class="control-container">
                         <div class="control-text">以「選單方式」查詢預估資訊</div>
                         <div class="control-icon" @click="handleFilter">
                             <span class="material-symbols-outlined"> tune </span>
                         </div>
                     </div>
-                    <div v-show="filterIcon" class="controlStatus-container">
-                        <!-- {{ dataList?.Routes[0] }} -->
+                </template>
 
-                        <el-check-tag v-for="(item, index) in dataList.Routes" :key="item.RouteID"
-                            :checked="selectedIndex === index" @change="
-                                (status) => onChange(status, index, item.RouteName.Zh_tw, item)
-                            ">{{ item.RouteName.Zh_tw }}</el-check-tag>
-                    </div>
+
+
+                <div ref="controlStatusRef" v-show="filterIcon" class="controlStatus-container">
+
+                    <!-- {{ dataList?.Routes[0] }} -->
+
+                    <el-check-tag v-for="(item, index) in dataList.Routes" :key="item.RouteID"
+                        :checked="selectedIndex === index" @change="
+                            (status) => onChange(status, index, item.RouteName.Zh_tw, item)
+                        ">{{ item.RouteName.Zh_tw }}</el-check-tag>
+                </div>
+                <el-scrollbar class="scrollbar-content" :style="{'height':customHeight}">
+                
                     <el-card class="card-content" v-if="selectedIndex !== null">
 
                         起點站 : {{ dataDetail.departureStopName }} <br />
@@ -59,7 +65,7 @@
 
 
 <script lang="ts" setup>
-import { ref, onMounted, reactive, nextTick } from "vue";
+import { ref, onMounted, reactive, nextTick, onUnmounted } from "vue";
 import { ArrowRight } from '@element-plus/icons-vue'
 import L from "leaflet";
 
@@ -337,6 +343,46 @@ function routeApi() {
     //       console.log(err);
     //     });
 }
+
+
+const customHeight = ref("");
+const controlRef = ref(null);
+const controlStatusRef = ref(null);
+
+const updateScrollbarHeight = () => {
+    if (controlRef.value || controlStatusRef.value) {
+     
+        const rect = controlRef.value.getBoundingClientRect();
+        const rect2 = controlStatusRef.value.getBoundingClientRect();
+           const totalOccupied = rect.height + rect2.height;
+        customHeight.value = `calc(95vh - ${totalOccupied}px)`;
+    }
+};
+
+onMounted(async () => {
+    await nextTick();
+    const observer = new ResizeObserver(() => {
+        updateScrollbarHeight();
+    });
+
+    // 分別檢查並啟動監聽
+    if (controlRef.value) {
+        observer.observe(controlRef.value);
+    }
+    if (controlStatusRef.value) {
+        observer.observe(controlStatusRef.value);
+    }
+
+    // 初始化執行一次
+    updateScrollbarHeight();
+
+    // 確保銷毀時清理
+    onUnmounted(() => {
+        observer.disconnect();
+    });
+});
+
+
 //公車定點資料
 function realTimeByFrequency(routeName) {
     realTimeByFrequencyList.value = [];

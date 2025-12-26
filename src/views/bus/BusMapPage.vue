@@ -3,77 +3,59 @@
 
     <template #sidebar>
       <BusSidebar>
-
-        <div
-          v-for="item in title?.Networks"
-          :key="item.SubRouteUID"
-          class="title-container"
-        >
-          <h2 class="title-container__label">
-            {{ item.NetworkName.Zh_tw }}
-          </h2>
-          <div class="title-container__sublabel">
-            {{ item.NetworkName.En }}
+        <template #top>
+     
+          <div ref="titleRef" v-for="item in title?.Networks" :key="item.SubRouteUID" class="title-container">
+            <h2 class="title-container__label">
+              {{ item.NetworkName.Zh_tw }}
+            </h2>
+            <div class="title-container__sublabel">
+              {{ item.NetworkName.En }}
+            </div>
           </div>
-        </div>
 
-        <!-- 去 / 回程 -->
-        <div class="control-container">
-          <el-radio-group
+          <!-- 去 / 回程 -->
+          <div ref="controlRef" class="control-container">
+            <el-radio-group v-model="vaildControl" size="small" @change="handleControl">
+              <el-radio-button label="去程" value="go" type="success" />
+              <el-radio-button label="往返" value="back" type="success" />
+            </el-radio-group>
+          </div>
+        </template>
 
-            v-model="vaildControl"
-            size="small"
-            @change="handleControl"
-          >
-            <el-radio-button label="去程" value="go" type="success"/>
-            <el-radio-button label="往返" value="back" type="success"/>
-          </el-radio-group>
-        </div>
 
         <!-- 路線 / 站牌 -->
-        <el-scrollbar v-loading="loading">
-           <div  class="list-container">
-            <el-empty
-            v-if="!loading && stopCityList.length === 0"
-            description="附近無資料"
-          />
+        <el-scrollbar v-loading="loading"  :style="{'height':customHeight}">
 
-          <el-card
-            v-for="(route, routeIndex) in stopCityList"
-            :key="route.SubRouteUID"
-     
-          >
-            <h3
-              class="label_style"
-              @click="toggleShowLine(routeIndex)"
-            >
-              {{ route.SubRouteName.Zh_tw }}
-              <span class="text-unit">
-                {{ directionText(route.Direction) }}
-              </span>
-            </h3>
 
-            <div v-show="showLine[routeIndex]" class="stop__line">
-              <div
-                v-for="(stop, stopIndex) in route.Stops"
-                :key="stop.StopUID"
-                :class="[
+          <div class="list-container">
+            <el-empty v-if="!loading && stopCityList.length === 0" description="附近無資料" />
+
+            <el-card v-for="(route, routeIndex) in stopCityList" :key="route.SubRouteUID">
+              <h3 class="label_style" @click="toggleShowLine(routeIndex)">
+                {{ route.SubRouteName.Zh_tw }}
+                <span class="text-unit">
+                  {{ directionText(route.Direction) }}
+                </span>
+              </h3>
+
+              <div v-show="showLine[routeIndex]" class="stop__line">
+                <div v-for="(stop, stopIndex) in route.Stops" :key="stop.StopUID" :class="[
                   'location-top',
                   { active: activeStopUID === stop.StopUID },
-                ]"
-                @click="flyToStop(stop)">
-                <strong>{{ stop.StopSequence }}</strong>
-                <span class="stop-name">{{ stop.StopName.Zh_tw }}</span>
+                ]" @click="flyToStop(stop)">
+                  <strong>{{ stop.StopSequence }}</strong>
+                  <span class="stop-name">{{ stop.StopName.Zh_tw }}</span>
+                </div>
               </div>
-            </div>
-          </el-card>
-           </div>
-          
+            </el-card>
+          </div>
+
         </el-scrollbar>
       </BusSidebar>
     </template>
 
-  
+
     <template #map>
       <LeafletMap ref="mapRef" />
     </template>
@@ -82,7 +64,7 @@
 
 <script setup>
 
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
 import L from "leaflet";
 
 import MapLayout from "@/layouts/components/MapLayout.vue";
@@ -210,6 +192,63 @@ function addMarkers(route) {
   });
 }
 
+
+
+const customHeight = ref("80vh"); // 給一個預設值
+const controlRef = ref(null);
+const titleRef = ref(null);
+
+const updateScrollbarHeight = () => {
+
+    const controlEl = controlRef.value;
+    const controlHeight = controlEl ? controlEl.getBoundingClientRect().height : 0;
+
+    // 獲取 title 的高度 (處理 v-for 產生的 Array)
+    let titleHeight = 0;
+    if (Array.isArray(titleRef.value) && titleRef.value.length > 0) {
+        // 如果有多個 title，加總它們的高度，或者取外層容器
+        titleRef.value.forEach(el => {
+            titleHeight += el.getBoundingClientRect().height;
+        });
+    } else if (titleRef.value) {
+        // 如果不是陣列（單一元素）
+        titleHeight = titleRef.value.getBoundingClientRect().height;
+    }
+
+    const totalOccupied = controlHeight + titleHeight;
+
+    customHeight.value = `calc(95vh - ${totalOccupied}px)`;
+};
+onMounted(async () => {
+    await nextTick();
+    
+ 
+    const observer = new ResizeObserver(() => {
+        updateScrollbarHeight();
+    });
+
+
+    if (controlRef.value) {
+        observer.observe(controlRef.value);
+    }
+    
+    // 監聽 title (如果是陣列則遍歷)
+    if (Array.isArray(titleRef.value)) {
+        titleRef.value.forEach(el => observer.observe(el));
+    } else if (titleRef.value) {
+        observer.observe(titleRef.value);
+    }
+
+    updateScrollbarHeight();
+
+    onUnmounted(() => {
+        observer.disconnect();
+    });
+});
+
+
+
+
 function removeMarkers(route) {
   route.Stops.forEach(stop => {
     const marker = markersMap.get(stop.StopUID);
@@ -263,5 +302,9 @@ function directionText(val) {
     color: #3e835e;
     font-weight: bold;
   }
+}
+
+.scrollbar-content {
+  height: 80vh;
 }
 </style>
