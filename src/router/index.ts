@@ -22,10 +22,22 @@ const router = createRouter({
           component: () => import("@/views/HomeView.vue"),
           meta: { requiresAuth: false },
         },
+         {
+          path: "/test",
+          name: "test",
+          component: () => import("@/views/ＭapSearch.vue"),
+          meta: { requiresAuth: false },
+        },
         {
           path: "/mapSearch",
           name: "mapSearch",
-          component: () => import("@/views/ＭapSearch.vue"),
+          component: () => import("@/views/bus/BusＭapSearch.vue"),
+          meta: { requiresAuth: false },
+        },
+        {
+          path: "/mapRoute",
+          name: "mapRoute",
+          component: () => import("@/views/bus/BusMapPage.vue"),
           meta: { requiresAuth: false },
         },
          {

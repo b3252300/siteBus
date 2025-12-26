@@ -1,5 +1,13 @@
-/* color palette from <https://github.com/vuejs/theme> */
+/* 全域 SCSS 變數與 CSS custom properties */
 :root {
+  --el-text-color-primary: #767676;
+  --el-text-color-placeholder: #408560;
+  --el-color-success: #408560;
+      --el-color-primary: #408560;
+  --el-link-hover-text-color: var(--el-color-success);
+  --el-border-radius-base: 8px;
+  --el-input-bg-color: #e9f4ee;
+
   --vt-c-white: #ffffff;
   --vt-c-white-soft: #f8f8f8;
   --vt-c-white-mute: #f2f2f2;
@@ -48,39 +56,4 @@
     --color-heading: var(--vt-c-text-dark-1);
     --color-text: var(--vt-c-text-dark-2);
   }
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
-}
-
-body {
-  min-height: 100vh;
-  color: var(--color-text);
-  background: var(--color-background);
-  transition:
-    color 0.5s,
-    background-color 0.5s;
-  line-height: 1.6;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
-  font-size: 15px;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }

@@ -15,6 +15,17 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+      
+         additionalData: `  
+          @use "@/style/variables.scss" as *; 
+             `,
+      }
+      
+    }
+  },
   server: {
     port: 5173,
     host: '0.0.0.0',

@@ -5,7 +5,7 @@ import ElementPlus from 'element-plus'
 import 'leaflet/dist/leaflet.css'
 import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
-import './assets/main.css'
+// import './assets/main.css'
 import App from './App.vue'
 import router from './router'
 import "./style/main.scss"

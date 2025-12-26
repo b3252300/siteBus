@@ -1,6 +1,13 @@
 <template>
   <div class="sidebar-container">
     <div class="menu-list">
+      <div class="menu-list__item" @click="handleSortOpen">
+        <div class="menu-list__icon">
+          <span class="material-symbols-outlined"> search_insights </span>
+        </div>
+
+        <div>路線站序</div>
+      </div>
       <div class="menu-list__item" @click="handleOpen">
         <div class="menu-list__icon">
           <span class="material-symbols-outlined"> search_insights </span>
@@ -54,10 +61,16 @@ const handleMapSearchOpen = () => {
 
   // 呼叫 store 的 action 來開啟側欄
   router.push({ path: "/mapSearch" });
-    if (!sidebar.sidebarOpen) {
- sidebar.toggleSidebar();
-    }
- 
+  if (!sidebar.sidebarOpen) {
+    sidebar.toggleSidebar();
+  }
+
+}
+const handleSortOpen = () => {
+    router.push({ path: "/mapRoute" });
+  // if (!sidebar.sidebarOpen) {
+  //   sidebar.toggleSidebar();
+  // }
 }
 
 const handleExplainOpen = () => {

@@ -1,15 +1,38 @@
-:root {
-  --el-text-color-primary: #767676;
-  --el-text-color-placeholder: #408560;
-  --el-color-success: #408560;
-}
-.el-link {
+@use '@/style/variables.scss' as *;
 
-    --el-link-hover-text-color: var(--el-color-success);
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  font-weight: normal;
 }
-.el-input {
-  --el-border-radius-base: 8px;
-  --el-input-bg-color: #e9f4ee;
+
+body {
+  min-height: 100vh;
+  color: var(--color-text);
+  background: var(--color-background);
+  transition:
+    color 0.5s,
+    background-color 0.5s;
+  line-height: 1.6;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  font-size: 15px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .text-unit {
@@ -56,38 +79,24 @@ body,
   text-align: center;
   background: #88c6a5;
 }
-.title-container__lable {
+.title-container__label {
   font-size: 18px;
   font-weight: bolder;
 }
-.title-container_sublable {
+.title-container__sublabel {
   font-size: 14px;
   color: #404040;
 }
 
 .sidebar {
-  background: #fff;
-  border-right: 1px solid #dcdfe6;
+
   display: flex;
   flex-direction: column;
-  z-index: 100;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  position: fixed;
-  top: 1rem;
-  left: 5rem;
-  height: 95%;
-  border-radius: var(--el-border-radius-base);
-  overflow: hidden;
-  width: 378px;
-  transform: translateX(-465px);
-  transition: transform 0.28s ease;
-  @media (max-width: 575px) {
-    height: 50%;
-    top: 50%;
-    position: absolute;
-    left: 0;
-    width: 100%;
-  }
+
+ 
+
+
+
 }
 
 .sidebar.active {
@@ -155,7 +164,9 @@ body,
   color: var(--el-text-color-primary);
   filter: drop-shadow(2px 4px 6px rgba(131, 86, 37, 0.66));
 }
-
+.leaflet-pane{
+  z-index: 200;
+}
 .leaflet-pane.leaflet-overlay-pane path {
   stroke: #36bb74;
   fill: #28b369;
