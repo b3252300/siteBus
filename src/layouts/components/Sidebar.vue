@@ -8,13 +8,7 @@
 
         <div>路線站序</div>
       </div>
-      <div class="menu-list__item" @click="handleOpen">
-        <div class="menu-list__icon">
-          <span class="material-symbols-outlined"> search_insights </span>
-        </div>
 
-        <div>路線站序</div>
-      </div>
       <div class="menu-list__item" @click="handleMapSearchOpen">
         <div class="menu-list__icon">
           <span class="material-symbols-outlined"> explore_nearby </span>
