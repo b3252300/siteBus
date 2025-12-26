@@ -28,7 +28,7 @@
             </BusSidebar>
         </template>
         <div v-show="dataItem" class="news-container">
-            <el-scrollbar class="scrollbar-content">
+            <el-scrollbar :style="{'height':customHeight}">
             <h2 class="page-title">{{ dataItem?.Newses[0].Title }}</h2>
             <div v-show="showNewsContent.length > 0" v-html="dataItem?.Newses[0].Description" />
 

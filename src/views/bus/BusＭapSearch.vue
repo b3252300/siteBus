@@ -18,7 +18,7 @@
 
                     <!-- {{ dataList?.Routes[0] }} -->
 
-                    <el-check-tag v-for="(item, index) in dataList.Routes" :key="item.RouteID"
+                    <el-check-tag v-for="(item, index) in dataList?.Routes" :key="item.RouteID"
                         :checked="selectedIndex === index" @change="
                             (status) => onChange(status, index, item.RouteName.Zh_tw, item)
                         ">{{ item.RouteName.Zh_tw }}</el-check-tag>
@@ -77,8 +77,9 @@ import tdxRequest from "@/api/tdxApi";
 
 import iconUrl from "@/assets/Vector-icon.png?url";
 import iconRetinaUrl from "@/assets/Vector-icon-2x.png?url";
-import shadowUrl from "@/assets/Vector-shadow.png?url";s
-
+import shadowUrl from "@/assets/Vector-shadow.png?url";
+import { fetchTainanBusNetwork } from "@/utils/bus";
+const { routesCity } = fetchTainanBusNetwork();
 const loading = ref(false);
 
 
@@ -329,7 +330,7 @@ async function init() {
 
 
 
-
+const dataList = ref([]);
 function routeApi() {
     dataList.value = routesCity;
 
