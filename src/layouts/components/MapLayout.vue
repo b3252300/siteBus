@@ -38,7 +38,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .map-layout {
   height: 100vh;
 }
@@ -49,7 +49,7 @@ const props = withDefaults(defineProps<Props>(), {
   left: 5rem;
   max-width: calc(100% - 6rem);
   height: 95%;
-  z-index: 201;
+  z-index: 1001;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   background: #fff;
   border-radius: var(--el-border-radius-base);
@@ -64,21 +64,29 @@ const props = withDefaults(defineProps<Props>(), {
   justify-content: flex-start;
 
   @media (max-width: 575px) {
-    height: 50%;
+    height: 50vh;
     top: 50%;
     position: absolute;
     left: 0;
     width: 100%;
     max-width: 100%;
+    border-radius: 0;
   }
 }
 
 .map-layout__sidebar {
   width: 378px;
   flex: 0 0 378px;
+
+
   @media (max-width: 575px) {
-     width: 100%;
-  flex: 0 0 100%;
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    height: 100%;
+
+    :deep(.el-drawer__header) {
+      margin-bottom: 0;
+    }
   }
 }
 

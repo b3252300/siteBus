@@ -17,6 +17,8 @@
 
 import { useLoadingStore } from "@/stores/useLoading"
   const load = useLoadingStore();
+
+
 </script>  
 <style scoped>
 .sidebar {

@@ -55,10 +55,9 @@ const { newslist } = fetchTainanBusNetwork();
 
 const load = useLoadingStore();
 
-const router = useRouter();
+
 const { GetDateYYYYMMDD } = useDate();
-const mapRef = ref<InstanceType<typeof LeafletMap> | null>(null);
-const loading = ref(false);
+
 const dataList = ref<string[]>([]);
 const dataItem = ref(null);
 
@@ -122,8 +121,12 @@ function fetchBusNews() {
 }
 
 function fetchBusNewsItem(NewsID) {
+    load.openLoading();
     tdxRequest.get(`/Bus/News/City/Tainan?$filter=contains(NewsID, '${NewsID}')&$format=JSON`).then((res) => {
         dataItem.value = res.data || null;
+    }).finally(()=>{
+
+        load.closeLoading();
     });
 }
 

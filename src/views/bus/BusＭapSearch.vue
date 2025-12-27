@@ -23,36 +23,64 @@
                             (status) => onChange(status, index, item.RouteName.Zh_tw, item)
                         ">{{ item.RouteName.Zh_tw }}</el-check-tag>
                 </div>
-                <el-scrollbar class="scrollbar-content" :style="{'height':customHeight}">
-                
+                <!-- <el-scrollbar class="scrollbar-content dataDetail-content" :style="{ 'height': customHeight }">
+
                     <el-card class="card-content" v-if="selectedIndex !== null">
 
                         起點站 : {{ dataDetail.departureStopName }} <br />
                         終點站 : {{ dataDetail.endStop }} <br />
 
                         票價說明 : {{ dataDetail.ticketPriceDescription }} <br />
-                        <span v-for="name in dataDetail?.operatorName" :key="name.OperatorID"
-                            style="display: flex; align-items: center;">
-                            <span style="font-size: 18px;" class="material-symbols-outlined">directions_subway</span>
-                            {{ name.OperatorName.Zh_tw }}</span>
+                        <div>
+                            <span v-for="name in dataDetail?.operatorName" :key="name.OperatorID"
+                                style="display: flex; align-items: center;">
+                                <span style="font-size: 18px;"
+                                    class="material-symbols-outlined">directions_subway</span>
+                                {{ name.OperatorName.Zh_tw }}</span>
 
 
-                        <div class="card-content__item" v-for="(item, index) in realTimeByFrequencyList"
-                            :key="item.SubRouteID" @click="toggleShowLine(item)">
+                            <div class="card-content__item" v-for="(item, index) in realTimeByFrequencyList"
+                                :key="item.SubRouteID" @click="toggleShowLine(item)">
 
-                            <h1 class="card-content__lable">
+                                <h1 class="card-content__lable">
 
-                                {{ item.SubRouteName.Zh_tw }}
+                                    {{ item.SubRouteName.Zh_tw }}
 
-                                <el-button :icon="ArrowRight" circle size="small" color="#6A994E" plain />
-                            </h1>
-                            <span class="text-unit text-red"> {{ dutyStatus(item.DutyStatus) }}</span>
+                                    <el-button :icon="ArrowRight" circle size="small" color="#6A994E" plain />
+                                </h1>
+                                <span class="text-unit text-red"> {{ dutyStatus(item.DutyStatus) }}</span>
 
 
+                            </div>
                         </div>
+
                     </el-card>
-                </el-scrollbar>
+                </el-scrollbar> -->
             </BusSidebar>
+            <el-drawer  v-model="drawer" direction="btt"  size="100%" resizable>
+                   <div>
+                            <span v-for="name in dataDetail?.operatorName" :key="name.OperatorID"
+                                style="display: flex; align-items: center;">
+                                <span style="font-size: 18px;"
+                                    class="material-symbols-outlined">directions_subway</span>
+                                {{ name.OperatorName.Zh_tw }}</span>
+
+
+                            <div class="card-content__item" v-for="(item, index) in realTimeByFrequencyList"
+                                :key="item.SubRouteID" @click="toggleShowLine(item)">
+
+                                <h1 class="card-content__lable">
+
+                                    {{ item.SubRouteName.Zh_tw }}
+
+                                    <el-button :icon="ArrowRight" circle size="small" color="#6A994E" plain />
+                                </h1>
+                                <span class="text-unit text-red"> {{ dutyStatus(item.DutyStatus) }}</span>
+
+
+                            </div>
+                        </div>
+            </el-drawer>
         </template>
         <template #map>
             <LeafletMap ref="mapRef" />
@@ -80,9 +108,10 @@ import iconRetinaUrl from "@/assets/Vector-icon-2x.png?url";
 import shadowUrl from "@/assets/Vector-shadow.png?url";
 import { fetchTainanBusNetwork } from "@/utils/bus";
 const { routesCity } = fetchTainanBusNetwork();
-const loading = ref(false);
+import { useLoadingStore } from "@/stores/useLoading"
+  const load = useLoadingStore();
 
-
+const drawer = ref(false)
 const mapRef = ref<InstanceType<typeof LeafletMap> | null>(null);
 const map = ref<L.Map | null>(null);
 const mapLayer = ref<L.LayerGroup | null>(null);
@@ -130,7 +159,9 @@ const onChange = (
     detail: string
 ) => {
     console.log(detail, "detail");
+   
     if (status) {
+        drawer.value = true;
         selectedIndex.value = index;
         dataDetail.departureStopName = detail.DepartureStopName.Zh_tw;
         dataDetail.destinationStopName = detail.DestinationStopName.Zh_tw;
@@ -294,12 +325,12 @@ const toggleShowLine = (payload) => {
 
 async function init() {
     try {
-        loading.value = true;
+        load.openLoading();
 
 
         const initialLoadPromises = [
             routeApi(),
-            networkApi()
+            // networkApi()
         ];
 
 
@@ -309,12 +340,12 @@ async function init() {
         const routeResult = results[0];
         const networkResult = results[1];
 
-        if (routeResult.status === 'rejected') {
+        if (routeResult?.status === 'rejected') {
             console.error('Route API Failed:', routeResult.reason);
         }
 
         // 假設你要拿 networkApi 的回傳值設定 title
-        if (networkResult.status === 'fulfilled') {
+        if (networkResult?.status === 'fulfilled') {
             // 如果 networkApi 有 return data
             // title.value = networkResult.value; 
         }
@@ -324,7 +355,7 @@ async function init() {
 
         console.error('Initialization error:', e);
     } finally {
-        loading.value = false;
+        load.closeLoading();
     }
 }
 
@@ -332,6 +363,7 @@ async function init() {
 
 const dataList = ref([]);
 function routeApi() {
+    
     dataList.value = routesCity;
 
     //   tdxRequest
@@ -352,10 +384,10 @@ const controlStatusRef = ref(null);
 
 const updateScrollbarHeight = () => {
     if (controlRef.value || controlStatusRef.value) {
-     
+
         const rect = controlRef.value.getBoundingClientRect();
         const rect2 = controlStatusRef.value.getBoundingClientRect();
-           const totalOccupied = rect.height + rect2.height;
+        const totalOccupied = rect.height + rect2.height;
         customHeight.value = `calc(95vh - ${totalOccupied}px)`;
     }
 };
@@ -387,6 +419,7 @@ onMounted(async () => {
 //公車定點資料
 function realTimeByFrequency(routeName) {
     realTimeByFrequencyList.value = [];
+         load.openLoading();
     tdxRequest
         .get(
             `/Bus/RealTimeByFrequency/City/Tainan/${routeName}?%24top=30&%24format=JSON`
@@ -397,6 +430,10 @@ function realTimeByFrequency(routeName) {
         })
         .catch((err) => {
             console.log(err);
+        }).finally(()=>{
+            //   load.closeLoading();
+
+
         });
 }
 function dutyStatus(status) {

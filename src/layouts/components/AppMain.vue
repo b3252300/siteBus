@@ -1,10 +1,10 @@
 <template>
   <div class="app-main">
 
-    <router-view :key="$route.fullPath" v-slot="{ Component }">     
-        <keep-alive>
-          <component :is="Component" :key="key" />
-        </keep-alive>
+    <router-view :key="$route.fullPath" v-slot="{ Component }">
+      <keep-alive>
+        <component :is="Component" :key="key" />
+      </keep-alive>
     </router-view>
 
 
@@ -12,29 +12,30 @@
 </template>
 
 <script setup lang="ts">
-  import { computed } from 'vue';
-  import { useRoute } from 'vue-router';
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
 
 
 
-  const route = useRoute();
-
-  
-
-  const key = computed(() => route.path);
- 
+const route = useRoute();
 
 
-  defineOptions({
-    name: 'AppMain',
-  });
+
+const key = computed(() => route.path);
+
+
+
+defineOptions({
+  name: 'AppMain',
+});
 </script>
 <style scoped lang="scss">
 .app-main {
-    height: 100vh;
-    padding-left: 72px;
+  height: 100vh;
+  padding-left: 72px;
+
+  @media (max-width: 575px) {
+    padding-left: 0;
+  }
 }
-
-
 </style>
-

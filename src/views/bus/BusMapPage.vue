@@ -208,11 +208,11 @@ const updateScrollbarHeight = () => {
     if (Array.isArray(titleRef.value) && titleRef.value.length > 0) {
         // 如果有多個 title，加總它們的高度，或者取外層容器
         titleRef.value.forEach(el => {
-            titleHeight += el.getBoundingClientRect().height;
+            titleHeight += el.getBoundingClientRect()?.height;
         });
     } else if (titleRef.value) {
         // 如果不是陣列（單一元素）
-        titleHeight = titleRef.value.getBoundingClientRect().height;
+        titleHeight = titleRef.value.getBoundingClientRect()?.height;
     }
 
     const totalOccupied = controlHeight + titleHeight;
