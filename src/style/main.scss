@@ -42,7 +42,9 @@ body {
 .text-red {
   color: #ff2807;
 }
-
+.el-drawer__header {
+  margin-bottom: 0;
+}
 .eta-text {
   margin-top: 6px;
   font-size: 14px;
@@ -382,3 +384,9 @@ body,
     background: #f0f9ea;
 }
 
+.newsDrawer-container{
+  display: none;
+  @media (max-width:575px) {
+     display: block;
+  }
+}

@@ -50,7 +50,7 @@
   </div>
   <el-drawer v-model="drawer" direction="ltr" size="72px">
 
-<div class="menu-list">
+    <div class="menu-list">
       <div class="menu-list__item" @click="handleSortOpen">
         <div class="menu-list__icon">
           <span class="material-symbols-outlined"> search_insights </span>
@@ -84,7 +84,7 @@
   </el-drawer>
 </template>
 <script lang="ts" setup>
-import {ref} from "vue";
+import { ref } from "vue";
 import router from "@/router";
 import { useUiStore } from "@/stores/ui";
 const sidebar = useUiStore();
@@ -100,7 +100,7 @@ const handleOpen = () => {
 };
 const handleMapSearchOpen = () => {
 
-   drawer.value = false;
+  drawer.value = false;
   router.push({ path: "/mapSearch" });
   if (!sidebar.sidebarOpen) {
     sidebar.toggleSidebar();
@@ -120,21 +120,28 @@ const handleSortOpen = () => {
 }
 
 const handleExplainOpen = () => {
-   drawer.value = false;
+  drawer.value = false;
   router.push({ path: "/explain" });
 }
 </script>
 <style scoped lang="scss">
 .sidebar-menu {
-    position: fixed;
-    top: 0.5rem;
-    left: 0.5rem;
-    z-index: 1001;
-    background: var(--el-color-primary);
-    width: 50px;
-    height: 40px;
-        color: #fff;
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 1001;
+  background: var(--el-color-primary);
+  width: 50px;
+  height: 40px;
+  color: #fff;
+  display: none;
+  padding: 0;
+
+  @media (max-width: 575px) {
+    display: block;
+  }
 }
+
 .sidebar-container {
   position: fixed;
   top: 0;

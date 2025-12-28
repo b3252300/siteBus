@@ -56,7 +56,7 @@ const props = withDefaults(defineProps<Props>(), {
   overflow: hidden;
   transform: translateX(0);
   transition: transform 0.28s ease;
-  gap: 1rem;
+
   border-right: 1px solid #dcdfe6;
   display: flex;
   align-items: flex-start;

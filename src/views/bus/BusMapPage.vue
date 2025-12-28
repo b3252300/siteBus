@@ -4,7 +4,7 @@
     <template #sidebar>
       <BusSidebar>
         <template #top>
-     
+
           <div ref="titleRef" v-for="item in title?.Networks" :key="item.SubRouteUID" class="title-container">
             <h2 class="title-container__label">
               {{ item.NetworkName.Zh_tw }}
@@ -25,7 +25,7 @@
 
 
         <!-- 路線 / 站牌 -->
-        <el-scrollbar v-loading="loading"  :style="{'height':customHeight}">
+        <el-scrollbar v-loading="load.loading" :style="{ 'height': customHeight }">
 
 
           <div class="list-container">
@@ -76,7 +76,8 @@ import tdxRequest from "@/api/tdxApi";
 import iconUrl from "@/assets/Vector-icon.png?url";
 import iconRetinaUrl from "@/assets/Vector-icon-2x.png?url";
 import shadowUrl from "@/assets/Vector-shadow.png?url";
-
+import { useLoadingStore } from "@/stores/useLoading"
+const load = useLoadingStore();
 
 const mapRef = ref(null);
 const map = ref(null);
@@ -102,10 +103,17 @@ onMounted(async () => {
 
 
 async function initData() {
-  loading.value = true;
-  await Promise.all([fetchNetwork(), fetchStopOfRoute()]);
-  applyDirectionFilter();
-  loading.value = false;
+
+
+  try {
+    load.openLoading();
+    await Promise.all([fetchNetwork(), fetchStopOfRoute()]);
+    applyDirectionFilter();
+  } catch { } finally {
+    load.closeLoading();
+  }
+
+
 }
 
 /* ================= API ================= */
@@ -200,50 +208,50 @@ const titleRef = ref(null);
 
 const updateScrollbarHeight = () => {
 
-    const controlEl = controlRef.value;
-    const controlHeight = controlEl ? controlEl.getBoundingClientRect().height : 0;
+  const controlEl = controlRef.value;
+  const controlHeight = controlEl ? controlEl.getBoundingClientRect().height : 0;
 
-    // 獲取 title 的高度 (處理 v-for 產生的 Array)
-    let titleHeight = 0;
-    if (Array.isArray(titleRef.value) && titleRef.value.length > 0) {
-        // 如果有多個 title，加總它們的高度，或者取外層容器
-        titleRef.value.forEach(el => {
-            titleHeight += el.getBoundingClientRect()?.height;
-        });
-    } else if (titleRef.value) {
-        // 如果不是陣列（單一元素）
-        titleHeight = titleRef.value.getBoundingClientRect()?.height;
-    }
+  // 獲取 title 的高度 (處理 v-for 產生的 Array)
+  let titleHeight = 0;
+  if (Array.isArray(titleRef.value) && titleRef.value.length > 0) {
+    // 如果有多個 title，加總它們的高度，或者取外層容器
+    titleRef.value.forEach(el => {
+      titleHeight += el.getBoundingClientRect()?.height;
+    });
+  } else if (titleRef.value) {
+    // 如果不是陣列（單一元素）
+    titleHeight = titleRef.value.getBoundingClientRect()?.height;
+  }
 
-    const totalOccupied = controlHeight + titleHeight;
+  const totalOccupied = controlHeight + titleHeight;
 
-    customHeight.value = `calc(95vh - ${totalOccupied}px)`;
+  customHeight.value = `calc(95vh - ${totalOccupied}px)`;
 };
 onMounted(async () => {
-    await nextTick();
-    
- 
-    const observer = new ResizeObserver(() => {
-        updateScrollbarHeight();
-    });
+  await nextTick();
 
 
-    if (controlRef.value) {
-        observer.observe(controlRef.value);
-    }
-    
-    // 監聽 title (如果是陣列則遍歷)
-    if (Array.isArray(titleRef.value)) {
-        titleRef.value.forEach(el => observer.observe(el));
-    } else if (titleRef.value) {
-        observer.observe(titleRef.value);
-    }
-
+  const observer = new ResizeObserver(() => {
     updateScrollbarHeight();
+  });
 
-    onUnmounted(() => {
-        observer.disconnect();
-    });
+
+  if (controlRef.value) {
+    observer.observe(controlRef.value);
+  }
+
+  // 監聽 title (如果是陣列則遍歷)
+  if (Array.isArray(titleRef.value)) {
+    titleRef.value.forEach(el => observer.observe(el));
+  } else if (titleRef.value) {
+    observer.observe(titleRef.value);
+  }
+
+  updateScrollbarHeight();
+
+  onUnmounted(() => {
+    observer.disconnect();
+  });
 });
 
 
