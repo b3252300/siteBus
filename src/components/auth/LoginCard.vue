@@ -1,51 +1,45 @@
 <template>
   <div class="login-overlay">
-    <el-card class="login-card">
+    <div class="bg-overlay"></div>
+    <el-card class="login-card" shadow="never">
       <template #header>
         <h2 class="title-header" style="text-align: center; margin: 0">
-          新北市都更查詢系統
+          登入
         </h2>
       </template>
 
       <div class="login-steps">
         <div class="step-box">
-          <el-divider>步驟 1: Google 登入</el-divider>
 
-          <div
-            v-if="!user.google.id"
-            id="google_btn_wrapper"
-            class="center-flex"
-          ></div>
+
+          <div v-if="!user.google.id" id="google_btn_wrapper" class="center-flex"></div>
           <div v-else class="authenticated-info">
             <el-avatar :src="user.google.picture" />
-            <span class="success-text"
-              >Google 已驗證: {{ user.google.name }}</span
-            >
+            <span class="success-text">Google 已驗證: {{ user.google.name }}</span>
           </div>
         </div>
 
         <div class="step-box">
-          <el-divider>步驟 2: Facebook 綁定</el-divider>
+
           <div v-if="!user.facebook.id">
-            <el-button
-              type="primary"
-              size="large"
-              @click="handleFBLogin"
-              style="width: 100%; background-color: #1877f2"
-            >
-              <i class="fab fa-facebook-f" style="margin-right: 8px"></i> 綁定
+            <el-button class="btn-facebook" size="large" @click="handleFBLogin"
+              style="width: 250px;  border-radius: 4px;">
+
+              <img src="@/assets/facebook.png">
+
               Facebook
             </el-button>
           </div>
           <div v-else class="authenticated-info">
             <el-avatar :src="user.facebook.picture" />
-            <span class="success-text"
-              >Facebook 已綁定: {{ user.facebook.name }}</span
-            >
+            <span class="success-text">Facebook 已綁定: {{ user.facebook.name }}</span>
           </div>
         </div>
 
-        <el-button
+        <div class="btn-Retrun" @click="handleReturn">返回</div>
+
+
+        <!-- <el-button
           type="success"
           size="large"
           class="enter-btn"
@@ -54,7 +48,7 @@
           @click="handleEnter"
         >
           進入查詢地圖
-        </el-button>
+        </el-button> -->
       </div>
     </el-card>
   </div>
@@ -63,6 +57,7 @@
 <script setup>
 import { reactive, onMounted, nextTick } from "vue";
 import { ElMessage, ElNotification } from "element-plus";
+import router from "@/router";
 
 const GOOGLE_CLIENT_ID =
   "737444360335-03fp8kjs1alt73gi9dnr700ki5j12uhc.apps.googleusercontent.com";
@@ -90,9 +85,12 @@ const loadGoogleSDK = () => {
     const btnWrapper = document.getElementById("google_btn_wrapper");
     if (btnWrapper) {
       window.google.accounts.id.renderButton(btnWrapper, {
-        theme: "outline",
-        size: "large",
-        width: 250,
+        theme: "outline",      // 設定為白底灰框樣式 
+        size: "large",         // 按鈕大小
+        text: "signin_with",   // 設定文字為 "Sign in with Google" 
+        shape: "rectangular",  // 設定形狀為矩形 (預設值，可省略)
+        logo_alignment: "left",// Logo 靠左 (預設值，可省略)
+        width: 250,            // 您設定的寬度
       });
     }
   } else {
@@ -111,6 +109,7 @@ const handleGoogleResponse = (response) => {
   const payload = JSON.parse(
     decodeURIComponent(escape(atob(response.credential.split(".")[1])))
   );
+  console.log(payload, "payload");
   user.google = {
     id: payload.sub,
     name: payload.name,
@@ -165,7 +164,11 @@ const handleFBLogin = () => {
     { scope: "public_profile" }
   );
 };
+const handleReturn = () => {
+  router.push({ path: "/mapRoute" });
 
+
+}
 const handleEnter = async () => {
   await nextTick();
   if (!user.google.id) {
@@ -175,7 +178,7 @@ const handleEnter = async () => {
     });
     return;
   }
-  
+
   // 將使用者資訊傳回父元件
   emit("login-success", {
     google: user.google,
@@ -191,18 +194,33 @@ const handleEnter = async () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: #e9f4ee;
-  backdrop-filter: blur(5px);
+  background: #000;
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.bg-overlay {
+  background: url(/sitemap/src/assets/login-img.jpeg) no-repeat;
+  background-size: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(5px);
+  opacity: 0.4;
+}
+
 .login-card {
   width: 400px;
-  max-width: 90%;
-  border-radius: 8px;
+  position: relative;
+  z-index: 2;
+
+  :deep(.el-card__body) {
+    padding: calc(var(--el-card-padding) - 2px) var(--el-card-padding);
+  }
 }
 
 .step-box {
@@ -224,6 +242,7 @@ const handleEnter = async () => {
   padding: 5px 10px;
   border-radius: 8px;
   border: 1px solid #e1f3d8;
+
   .el-avatar {
     --el-avatar-size: 26px;
   }
@@ -248,8 +267,51 @@ const handleEnter = async () => {
   .el-divider__text {
     white-space: nowrap;
   }
+
   .el-card__body {
     padding: 10px;
   }
+}
+
+.btn-Retrun {
+  padding: 10px;
+  text-align: center;
+  width: 100%;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    text-decoration: underline;
+  }
+}
+
+
+.btn-facebook {
+  color: #3c4043;
+  font-weight: 700;
+position: relative;
+ :deep(span)  {
+    align-items: center;
+    display: flex;
+    position: relative;
+    width: 100%;
+    justify-content: center;
+    
+    img {
+      height: 20px;
+      background: #fff;
+      position: absolute;
+      left: -6px;
+      top: -2px;
+    }
+  }
+}
+
+.login-steps {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 </style>

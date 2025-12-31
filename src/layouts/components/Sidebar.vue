@@ -44,6 +44,18 @@
         </template>
 
 </el-popover> -->
+      <div class="menu-list__fixed">
+        <div class="menu-list__item" @click="handleLogin">
+          <div class="menu-list__icon">
+            <span class="material-symbols-outlined">
+              person_2
+            </span>
+
+          </div>
+
+          <div>登入</div>
+        </div>
+      </div>
 
 
     </div>
@@ -123,6 +135,11 @@ const handleExplainOpen = () => {
   drawer.value = false;
   router.push({ path: "/explain" });
 }
+const handleLogin = () => {
+  router.push({ path: "/login" });
+
+}
+
 </script>
 <style scoped lang="scss">
 .sidebar-menu {
@@ -187,5 +204,12 @@ const handleExplainOpen = () => {
   align-items: center;
   justify-content: center;
   border-radius: 6px;
+  margin: 0 auto;
+}
+.menu-list__fixed {
+    position: absolute;
+    bottom: 2rem;
+    left: 0;
+    width: 100%;
 }
 </style>
