@@ -1,4 +1,5 @@
 <template>
+
   <el-button @click="drawer = true" class="sidebar-menu">
     <span class="material-symbols-outlined">
       menu
@@ -31,21 +32,12 @@
 
         <div>其他資訊</div>
       </div>
-      <!-- <el-popover placement="right" :width="150" trigger="click">
-        <template #reference>
-          <div class="menu-list__item" @click="handleExplainOpen">
-            <div class="menu-list__icon">
-              <span class="material-symbols-outlined">layers</span>
 
-            </div>
-
-            <div>其他資訊</div>
-          </div>
-        </template>
-
-</el-popover> -->
       <div class="menu-list__fixed">
-        <div class="menu-list__item" @click="handleLogin">
+
+
+
+        <div v-if="user.google.id === null && user.facebook.id === null" class="menu-list__item" @click="handleLogin">
           <div class="menu-list__icon">
             <span class="material-symbols-outlined">
               person_2
@@ -54,6 +46,32 @@
           </div>
 
           <div>登入</div>
+        </div>
+        <div v-else>
+
+          <el-popover placement="right" :width="150" trigger="click">
+
+            <el-link ref="signOutRef" underline="hover" @click="signOut(user)">登出</el-link>
+            <template #reference>
+              <div class="login-out">
+                <template v-if="user.google.picture">
+                  <img class="login-img" :src="user.google.picture">
+                  {{ user.google.name }}
+                </template>
+                <template v-if="user.facebook.picture">
+                  <img class="login-img" :src="user.facebook.picture">
+                  {{ user.facebook.name }}
+
+                </template>
+
+
+              </div>
+
+            </template>
+
+          </el-popover>
+
+
         </div>
       </div>
 
@@ -96,20 +114,24 @@
   </el-drawer>
 </template>
 <script lang="ts" setup>
-import { ref } from "vue";
+import { onMounted, ref, watchEffect } from "vue";
 import router from "@/router";
 import { useUiStore } from "@/stores/ui";
 const sidebar = useUiStore();
-const handleOpen = () => {
 
-  // 呼叫 store 的 action 來開啟側欄
-  router.push({ path: "/map" });
-  if (!sidebar.sidebarOpen) {
-    sidebar.openSidebar();
-  }
+import { useAuthStore } from "@/stores/auth";
+const authStore = useAuthStore();
+console.log(authStore.user, "authStore");
 
 
-};
+const user = ref();
+
+watchEffect(() => {
+
+  user.value = authStore.user;
+
+});
+
 const handleMapSearchOpen = () => {
 
   drawer.value = false;
@@ -139,6 +161,19 @@ const handleLogin = () => {
   router.push({ path: "/login" });
 
 }
+function signOut(user) {
+
+  if(user.google.id !== null){
+     authStore.logoutGoogle();
+       router.push({ path: "/mapRoute" });
+  }
+ if(user.facebook.id !== null){
+     authStore.logoutFacebook();
+       router.push({ path: "/mapRoute" });
+  }
+
+}
+
 
 </script>
 <style scoped lang="scss">
@@ -206,10 +241,30 @@ const handleLogin = () => {
   border-radius: 6px;
   margin: 0 auto;
 }
+
 .menu-list__fixed {
-    position: absolute;
-    bottom: 2rem;
-    left: 0;
-    width: 100%;
+  position: absolute;
+  bottom: 2rem;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-img {
+  width: 30px;
+  height: 30px;
+  border-radius: 100%;
+  border: solid #fff 1px;
+}
+
+.login-out {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
 }
 </style>

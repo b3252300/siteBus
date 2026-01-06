@@ -14,8 +14,8 @@
 
           <div v-if="!user.google.id" id="google_btn_wrapper" class="center-flex"></div>
           <div v-else class="authenticated-info">
-            <el-avatar :src="user.google.picture" />
-            <span class="success-text">Google 已驗證: {{ user.google.name }}</span>
+            <!-- <el-avatar :src="user.google.picture" />
+            <span class="success-text">Google 已驗證: {{ user.google.name }}</span> -->
           </div>
         </div>
 
@@ -35,8 +35,8 @@
             <span class="success-text">Facebook 已綁定: {{ user.facebook.name }}</span>
           </div>
         </div>
-
-        <div class="btn-Retrun" @click="handleReturn">返回</div>
+      <el-link underline="hover"  @click="handleReturn">返回</el-link>
+        <!-- <div class="btn-Retrun">返回</div> -->
 
 
         <!-- <el-button
@@ -58,6 +58,8 @@
 import { reactive, onMounted, nextTick } from "vue";
 import { ElMessage, ElNotification } from "element-plus";
 import router from "@/router";
+import { useAuthStore } from "@/stores/auth";
+const authStore = useAuthStore();
 
 const GOOGLE_CLIENT_ID =
   "737444360335-03fp8kjs1alt73gi9dnr700ki5j12uhc.apps.googleusercontent.com";
@@ -109,12 +111,23 @@ const handleGoogleResponse = (response) => {
   const payload = JSON.parse(
     decodeURIComponent(escape(atob(response.credential.split(".")[1])))
   );
-  console.log(payload, "payload");
+
   user.google = {
     id: payload.sub,
     name: payload.name,
     picture: payload.picture,
   };
+
+  // authStore.setUser({
+  //   google: user.google,
+  //   facebook: user.facebook,
+  // });
+   
+  // emit("login-success", {
+  //   google: user.google,
+  //   facebook: user.facebook,
+  // });
+  userEmits();
   ElMessage.success(`Google 登入成功: 歡迎 ${payload.name}`);
 };
 
@@ -155,7 +168,8 @@ const handleFBLogin = () => {
             name: userInfo.name,
             picture: userInfo.picture.data.url,
           };
-          ElMessage.success(`Facebook 綁定成功: ${userInfo.name}`);
+            userEmits();
+          ElMessage.success(`Facebook 登入成功: ${userInfo.name}`);
         });
       } else {
         ElMessage.warning("Facebook 登入取消");
@@ -164,6 +178,11 @@ const handleFBLogin = () => {
     { scope: "public_profile" }
   );
 };
+
+
+
+
+
 const handleReturn = () => {
   router.push({ path: "/mapRoute" });
 
@@ -185,6 +204,21 @@ const handleEnter = async () => {
     facebook: user.facebook,
   });
 };
+
+
+function userEmits(){
+
+  authStore.setUser({
+    google: user.google,
+    facebook: user.facebook,
+  });
+   
+  emit("login-success", {
+    google: user.google,
+    facebook: user.facebook,
+  });
+
+}
 </script>
 
 <style lang="scss" scoped>
@@ -194,7 +228,7 @@ const handleEnter = async () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: #000;
+    background: rgb(139 139 139 / 91%);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -202,7 +236,7 @@ const handleEnter = async () => {
 }
 
 .bg-overlay {
-  background: url(/sitemap/src/assets/login-img.jpeg) no-repeat;
+  //background: url(/sitemap/src/assets/login-img.jpeg) no-repeat;
   background-size: cover;
   position: absolute;
   top: 0;

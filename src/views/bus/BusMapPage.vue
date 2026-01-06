@@ -220,7 +220,7 @@ const updateScrollbarHeight = () => {
     });
   } else if (titleRef.value) {
     // 如果不是陣列（單一元素）
-    titleHeight = titleRef.value.getBoundingClientRect()?.height;
+    // titleHeight = titleRef.value?.getBoundingClientRect()?.height;
   }
 
   const totalOccupied = controlHeight + titleHeight;

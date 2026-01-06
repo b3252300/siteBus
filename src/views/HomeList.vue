@@ -513,7 +513,7 @@ body,
 }
 
 .user-location-tooltip {
-  background: transparent;
+  background: #fff;
   border: none;
   box-shadow: none;
 }
@@ -529,26 +529,19 @@ body,
   .el-card__body {
     padding: 10px;
   }
-  .tooltipHTML {
-    padding: 0;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    justify-content: center;
-  }
+
   .tooltipHTML__img {
     display: flex;
     gap: 4px;
     align-items: center;
     width: auto;
     img {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      border: solid #de9848 3px;
-      box-shadow: 2px 2px 9px rgb(131 86 37 / 66%);
-      background: #fff;
-      padding: 3px;
+       width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    box-shadow: 2px 2px 4px rgb(158 158 158 / 66%);
+    background: #fff;
+    padding: 2px;
     }
   }
 }

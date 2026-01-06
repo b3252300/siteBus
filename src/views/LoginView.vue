@@ -24,9 +24,11 @@ const authStore = useAuthStore();
 const mapRef = ref<InstanceType<typeof LeafletMap> | null>(null);
 const handleLoginSuccess = (userInfo) => {
   // 儲存使用者資訊到 Pinia Store
+
   if(userInfo){
-  authStore.setUser(userInfo);
-  router.push({ name: "map" });
+  // authStore.setUser(userInfo);
+
+  router.push({ path: "/mapRoute" });
 
     // 顯示成功通知
   ElNotification({

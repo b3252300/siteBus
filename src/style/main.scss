@@ -203,11 +203,13 @@ body,
   padding: 10px;
 }
 .tooltipHTML {
-  padding: 0;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  justify-content: center;
+    padding: 4px 5px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    justify-content: center;
+    background: #fff;
+    border-radius: 4px;
 }
 .tooltipHTML__img {
   display: flex;
@@ -215,13 +217,13 @@ body,
   align-items: center;
   width: auto;
   img {
-    width: 50px;
-    height: 50px;
+    width: 35px;
+    height: 35px;
     border-radius: 50%;
-    border: solid #de9848 3px;
-    box-shadow: 2px 2px 9px rgb(131 86 37 / 66%);
+
+    box-shadow: 2px 2px 4px rgba(171, 171, 171, 0.66);
     background: #fff;
-    padding: 3px;
+    padding: 2px;
   }
 }
 

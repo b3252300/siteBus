@@ -35,11 +35,40 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated.value = false;
   };
 
+  const logoutGoogle = () => {
+    const isGoogleLogin = !!user.value.google.id;
+
+    if (isGoogleLogin && window.google && window.google.accounts) {
+      // 這會讓使用者下次來時需要重新點選帳號，達到登出效果
+      window.google.accounts.id.disableAutoSelect();
+
+      //  revoke (徹底斷開連結)，您必須在 user 物件中多存一個 email
+      // window.google.accounts.id.revoke(user.value.google.email, ...)
+    }
+
+    // 清除本地狀態
+    clearUser();
+  };
+
+const logoutFacebook=()=>{
+// 如果目前有 FB ID 且 FB SDK 存在
+    if (user.value.facebook.id && window.FB) {
+      // FB.logout 會清除 Facebook 的 Access Token
+      window.FB.logout((response) => {
+   
+        console.log("Facebook 登出完成", response);
+      });
+    }
+      // 清除本地狀態
+    clearUser();
+}
 
   return {
     user,
     isAuthenticated,
     setUser,
     clearUser,
+    logoutGoogle,
+    logoutFacebook
   };
 });
