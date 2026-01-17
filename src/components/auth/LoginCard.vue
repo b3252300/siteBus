@@ -1,5 +1,6 @@
 <template>
   <div class="login-overlay">
+  
     <div class="bg-overlay"></div>
     <el-card class="login-card" shadow="never">
       <template #header>
@@ -10,23 +11,18 @@
 
       <div class="login-steps">
         <div class="step-box">
-
-
-          <div v-if="!user.google.id" id="google_btn_wrapper" class="center-flex"></div>
-          <div v-else class="authenticated-info">
-            <!-- <el-avatar :src="user.google.picture" />
-            <span class="success-text">Google 已驗證: {{ user.google.name }}</span> -->
+          <div v-show="!user.google.id" id="google_btn_wrapper" class="center-flex"></div>
+          <div v-if="user.google.id" class="authenticated-info">
+             <el-avatar :src="user.google.picture" />
+            <span class="success-text">Google 已驗證: {{ user.google.name }}</span>
           </div>
         </div>
 
         <div class="step-box">
-
           <div v-if="!user.facebook.id">
             <el-button class="btn-facebook" size="large" @click="handleFBLogin"
-              style="width: 250px;  border-radius: 4px;">
-
-              <img src="@/assets/facebook.png">
-
+              style="width: 250px; border-radius: 4px;">
+              <img src="@/assets/facebook.png" alt="FB">
               Facebook
             </el-button>
           </div>
@@ -35,21 +31,24 @@
             <span class="success-text">Facebook 已綁定: {{ user.facebook.name }}</span>
           </div>
         </div>
-      <el-link underline="hover"  @click="handleReturn">返回</el-link>
-        <!-- <div class="btn-Retrun">返回</div> -->
 
+        <div class="step-box">
+          <div v-if="!user.line.id">
+            <el-button class="btn-line" size="large" @click="handleLineLogin" 
+              style="width: 250px; border-radius: 4px; background-color: #06C755; color: white; border: none;">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" style="height: 20px; margin-right: 8px;" alt="LINE"> 
+              LINE 登入
+            </el-button>
+          </div>
+          <div v-else class="authenticated-info">
+            <el-avatar :src="user.line.picture" />
+            <span class="success-text">LINE 已綁定: {{ user.line.name }}</span>
+          </div>
+        </div>
 
-        <!-- <el-button
-          type="success"
-          size="large"
-          class="enter-btn"
-          color="#4EA476"
-          style="color: #fff"
-          @click="handleEnter"
-        >
-          進入查詢地圖
-        </el-button> -->
+        <el-link underline="hover" @click="handleReturn">返回</el-link>
       </div>
+     
     </el-card>
   </div>
 </template>
@@ -59,52 +58,78 @@ import { reactive, onMounted, nextTick } from "vue";
 import { ElMessage, ElNotification } from "element-plus";
 import router from "@/router";
 import { useAuthStore } from "@/stores/auth";
+import liff from "@line/liff";
+
 const authStore = useAuthStore();
 
-const GOOGLE_CLIENT_ID =
-  "737444360335-03fp8kjs1alt73gi9dnr700ki5j12uhc.apps.googleusercontent.com";
+// 建議將這些 ID 移至 .env 檔案
+const GOOGLE_CLIENT_ID = "737444360335-03fp8kjs1alt73gi9dnr700ki5j12uhc.apps.googleusercontent.com";
 const FB_APP_ID = "1943332376223447";
+const LINE_LIFF_ID = "2008860930-zwC6uFAG"; 
 
 const emit = defineEmits(["login-success"]);
 
 const user = reactive({
   google: { id: null, name: null, picture: null },
   facebook: { id: null, name: null, picture: null },
+  line: { id: null, name: null, picture: null },
 });
 
 onMounted(() => {
+  // 1. 初始化時先同步 Store 中的狀態 (避免重整後看起來像未登入)
+  syncUserFromStore();
+  
+  // 2. 載入 SDK
   loadGoogleSDK();
   loadFacebookSDK();
+  loadLineSDK();
 });
 
+const syncUserFromStore = () => {
+  // 假設 authStore 裡面的結構跟 user 一致，如果不一致請自行調整映射
+  if (authStore.user) {
+    if (authStore.user.google) user.google = authStore.user.google;
+    if (authStore.user.facebook) user.facebook = authStore.user.facebook;
+    if (authStore.user.line) user.line = authStore.user.line;
+  }
+};
+
+// --- Google Logic ---
 const loadGoogleSDK = () => {
   if (window.google && window.google.accounts) {
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleGoogleResponse,
-    });
-
-    const btnWrapper = document.getElementById("google_btn_wrapper");
-    if (btnWrapper) {
-      window.google.accounts.id.renderButton(btnWrapper, {
-        theme: "outline",      // 設定為白底灰框樣式 
-        size: "large",         // 按鈕大小
-        text: "signin_with",   // 設定文字為 "Sign in with Google" 
-        shape: "rectangular",  // 設定形狀為矩形 (預設值，可省略)
-        logo_alignment: "left",// Logo 靠左 (預設值，可省略)
-        width: 250,            // 您設定的寬度
-      });
-    }
+    initGoogleButton();
   } else {
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
     script.defer = true;
     script.onload = () => {
-      loadGoogleSDK();
+      initGoogleButton();
     };
     document.head.appendChild(script);
   }
+};
+
+const initGoogleButton = () => {
+  window.google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleGoogleResponse,
+  });
+
+  // 使用 nextTick 確保 DOM 元素存在
+  nextTick(() => {
+    const btnWrapper = document.getElementById("google_btn_wrapper");
+    if (btnWrapper) {
+      window.google.accounts.id.renderButton(btnWrapper, {
+        theme: "outline",
+        size: "large",
+        text: "signin_with",
+        shape: "rectangular",
+        logo_alignment: "left",
+        width: 250,
+      });
+    }
+  });
 };
 
 const handleGoogleResponse = (response) => {
@@ -118,23 +143,14 @@ const handleGoogleResponse = (response) => {
     picture: payload.picture,
   };
 
-  // authStore.setUser({
-  //   google: user.google,
-  //   facebook: user.facebook,
-  // });
-   
-  // emit("login-success", {
-  //   google: user.google,
-  //   facebook: user.facebook,
-  // });
   userEmits();
   ElMessage.success(`Google 登入成功: 歡迎 ${payload.name}`);
 };
 
+// --- Facebook Logic ---
 const loadFacebookSDK = () => {
-  if (window.FB) {
-    return;
-  }
+  if (window.FB) return;
+  
   window.fbAsyncInit = function () {
     window.FB.init({
       appId: FB_APP_ID,
@@ -142,14 +158,12 @@ const loadFacebookSDK = () => {
       xfbml: true,
       version: "v24.0",
     });
-    FB.AppEvents.logPageView();
+    window.FB.AppEvents.logPageView();
   };
+  
   (function (d, s, id) {
-    var js,
-      fjs = d.getElementsByTagName(s)[0];
-    if (d.getElementById(id)) {
-      return;
-    }
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
     js = d.createElement(s);
     js.id = id;
     js.src = "https://connect.facebook.net/en_US/sdk.js";
@@ -168,7 +182,7 @@ const handleFBLogin = () => {
             name: userInfo.name,
             picture: userInfo.picture.data.url,
           };
-            userEmits();
+          userEmits();
           ElMessage.success(`Facebook 登入成功: ${userInfo.name}`);
         });
       } else {
@@ -179,56 +193,94 @@ const handleFBLogin = () => {
   );
 };
 
+// --- LINE Logic ---
+const initializeLiff = async () => {
+  try {
 
-
-
-
-const handleReturn = () => {
-  router.push({ path: "/mapRoute" });
-
-
-}
-const handleEnter = async () => {
-  await nextTick();
-  if (!user.google.id) {
-    ElNotification({
-      title: "提示",
-      message: "您尚未登入喔",
-    });
-    return;
+    await liff.init({ liffId: LINE_LIFF_ID });
+    
+    // 如果是用戶從 LINE 登入頁面被導回來，這個條件會是 true
+    if (liff.isLoggedIn()) {
+      await getLineProfile();
+    }
+  } catch (err) {
+    console.error("LIFF Initialization failed", err);
   }
-
-  // 將使用者資訊傳回父元件
-  emit("login-success", {
-    google: user.google,
-    facebook: user.facebook,
-  });
 };
 
+const loadLineSDK = () => {
 
-function userEmits(){
+  if (liff) {
+     initializeLiff();
+     return;
+  }
+  const script = document.createElement("script");
+  script.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
+  script.async = true;
+  script.onload = () => {
+    initializeLiff();
+  };
+  document.head.appendChild(script);
+};
 
+const handleLineLogin = () => {
+  if (!liff) return;
+  if (!liff.isLoggedIn()) {
+    // 導向 LINE 登入頁面 (會離開當前頁面)
+    liff.login();
+  } else {
+    getLineProfile();
+  }
+};
+
+const getLineProfile = async () => {
+  try {
+    const profile = await liff.getProfile();
+    console.log(profile, "profile");
+    user.line = {
+      id: profile.userId,
+      name: profile.displayName,
+      picture: profile.pictureUrl,
+    };
+    userEmits();
+    ElMessage.success(`LINE 登入成功: ${profile.displayName}`);
+  } catch (err) {
+    console.error("Error getting profile", err);
+  }
+};
+
+// --- Common Logic ---
+const handleReturn = () => {
+  router.push({ path: "/mapRoute" });
+};
+
+// 修正：合併後的單一 userEmits 函數
+function userEmits() {
+  // 更新 Pinia Store
   authStore.setUser({
     google: user.google,
     facebook: user.facebook,
+    line: user.line,
   });
-   
+
+  // 通知父組件
   emit("login-success", {
     google: user.google,
     facebook: user.facebook,
+    line: user.line,
   });
-
 }
 </script>
 
 <style lang="scss" scoped>
+/* 樣式保持原樣，僅微調圖片 alt 屬性建議在 template 中加入 */
 .login-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-    background: rgb(139 139 139 / 91%);
+  background: rgb(139 139 139 / 91%);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -236,7 +288,6 @@ function userEmits(){
 }
 
 .bg-overlay {
-  //background: url(/sitemap/src/assets/login-img.jpeg) no-repeat;
   background-size: cover;
   position: absolute;
   top: 0;
@@ -286,51 +337,23 @@ function userEmits(){
   color: #4ea476;
 }
 
-.enter-btn {
-  width: 100%;
-  margin-top: 20px;
-  font-weight: bold;
-}
-
 .title-header {
   color: #408560;
   font-weight: 500;
 }
 
-:deep {
-  .el-divider__text {
-    white-space: nowrap;
-  }
-
-  .el-card__body {
-    padding: 10px;
-  }
-}
-
-.btn-Retrun {
-  padding: 10px;
-  text-align: center;
-  width: 100%;
-  cursor: pointer;
-
-  &:hover,
-  &:focus {
-    text-decoration: underline;
-  }
-}
-
-
 .btn-facebook {
   color: #3c4043;
   font-weight: 700;
-position: relative;
- :deep(span)  {
+  position: relative;
+  
+  :deep(span) {
     align-items: center;
     display: flex;
     position: relative;
     width: 100%;
     justify-content: center;
-    
+
     img {
       height: 20px;
       background: #fff;

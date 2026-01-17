@@ -36,8 +36,8 @@
       <div class="menu-list__fixed">
 
 
-
-        <div v-if="user.google.id === null && user.facebook.id === null" class="menu-list__item" @click="handleLogin">
+        <div v-if="!authStore.user.google.id && !authStore.user.facebook.id && !authStore.user.line.id" 
+       class="menu-list__item" @click="handleLogin">
           <div class="menu-list__icon">
             <span class="material-symbols-outlined">
               person_2
@@ -62,6 +62,10 @@
                   <img class="login-img" :src="user.facebook.picture">
                   {{ user.facebook.name }}
 
+                </template>
+                <template v-else-if="user.line.id">
+                  <img class="login-img" :src="user.line.picture" style="width: 30px; border-radius: 50%;">
+                  <span>{{ user.line.name }}</span>
                 </template>
 
 
@@ -114,23 +118,23 @@
   </el-drawer>
 </template>
 <script lang="ts" setup>
-import { onMounted, ref, watchEffect } from "vue";
+  import { storeToRefs } from "pinia";
+import { ref, computed } from "vue";
+import { ElMessage } from "element-plus";
 import router from "@/router";
 import { useUiStore } from "@/stores/ui";
+import { useAuthStore } from "@/stores/auth";
+
 const sidebar = useUiStore();
 
-import { useAuthStore } from "@/stores/auth";
+
 const authStore = useAuthStore();
+const { user, isAuthenticated } = storeToRefs(authStore);
 console.log(authStore.user, "authStore");
+console.log("Sidebar User:", user.value);
 
+// const user = computed(() => authStore.user);
 
-const user = ref();
-
-watchEffect(() => {
-
-  user.value = authStore.user;
-
-});
 
 const handleMapSearchOpen = () => {
 
@@ -161,17 +165,18 @@ const handleLogin = () => {
   router.push({ path: "/login" });
 
 }
-function signOut(user) {
-
-  if(user.google.id !== null){
-     authStore.logoutGoogle();
-       router.push({ path: "/mapRoute" });
+function signOut(u) {
+  if (u.google.id) {
+    authStore.logoutGoogle();
+  } else if (u.facebook.id) {
+    authStore.logoutFacebook();
+  } else if (u.line.id) {
+    authStore.logoutLine(); // 調用剛剛在 Store 新增的方法
   }
- if(user.facebook.id !== null){
-     authStore.logoutFacebook();
-       router.push({ path: "/mapRoute" });
-  }
-
+  
+  // 登出後導回首頁或重新導向
+  router.push({ path: "/mapRoute" });
+  ElMessage.success("已成功登出");
 }
 
 

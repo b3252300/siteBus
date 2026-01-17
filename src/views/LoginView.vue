@@ -1,13 +1,5 @@
 <template>
-<!-- <MapLayout height="44%">
 
-    <template #sidebar>
-      
-    </template>
-        <template #map>
-            <LeafletMap ref="mapRef" />
-        </template>
-</MapLayout> -->
     <LoginCard @login-success="handleLoginSuccess" />
 </template>
 
