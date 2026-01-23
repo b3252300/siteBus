@@ -63,9 +63,14 @@ import liff from "@line/liff";
 const authStore = useAuthStore();
 
 // 建議將這些 ID 移至 .env 檔案
-const GOOGLE_CLIENT_ID = "737444360335-03fp8kjs1alt73gi9dnr700ki5j12uhc.apps.googleusercontent.com";
-const FB_APP_ID = "1943332376223447";
-const LINE_LIFF_ID = "2008860930-zwC6uFAG"; 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const FB_APP_ID = import.meta.env.VITE_FB_APP_ID;
+const LINE_LIFF_ID = import.meta.env.VITE_LINE_LIFF_ID;
+
+// Debug: 檢查環境變數是否正確載入
+console.log('GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID ? '✓ 已載入' : '✗ 未載入');
+console.log('FB_APP_ID:', FB_APP_ID ? '✓ 已載入' : '✗ 未載入');
+console.log('LINE_LIFF_ID:', LINE_LIFF_ID ? '✓ 已載入' : '✗ 未載入');
 
 const emit = defineEmits(["login-success"]);
 
@@ -254,7 +259,7 @@ const handleReturn = () => {
   router.push({ path: "/mapRoute" });
 };
 
-// 修正：合併後的單一 userEmits 函數
+// 合併後的單一 userEmits 函數
 function userEmits() {
   // 更新 Pinia Store
   authStore.setUser({
@@ -273,7 +278,6 @@ function userEmits() {
 </script>
 
 <style lang="scss" scoped>
-/* 樣式保持原樣，僅微調圖片 alt 屬性建議在 template 中加入 */
 .login-overlay {
   position: fixed;
   top: 0;

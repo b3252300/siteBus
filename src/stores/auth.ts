@@ -24,7 +24,7 @@ export const useAuthStore = defineStore(
 
     const isAuthenticated = ref(false);
 
-    // 2. Actions
+   
     const setUser = (userInfo:UserInfo) => {
       // 確保欄位結構完整
       user.value = {
@@ -84,12 +84,8 @@ export const useAuthStore = defineStore(
     };
   },
   {
-    // 3. 【關鍵】開啟持久化，這裡設定為 true，資料就會自動存入 localStorage
+
     persist: true,
-    // 或者如果您想要更細緻的設定 (例如指定 key 名稱)：
-    // persist: {
-    //   key: 'user_info', // 在 LocalStorage 看到的 key 名稱
-    //   storage: localStorage,
-    // },
+   
   }
 );
