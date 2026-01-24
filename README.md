@@ -53,3 +53,6 @@ npm install
 # 啟動本地開發伺服器 (https://localhost:5173/)
 # 注意：若未啟用 HTTPS，FB/Google SDK 會報錯
 npm run dev
+
+# 推到github 的page裡面
+npm install --save gh-pages

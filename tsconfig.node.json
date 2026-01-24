@@ -14,6 +14,20 @@
 
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "types": ["node"]
+    "types": ["node"],
+    // 1. 關閉嚴格模式
+    // "strict": false,
+    
+    // // 2. 允許隱式的 any (解決大部分 TS7006, TS7034 錯誤)
+    // "noImplicitAny": false,
+    
+    // // 3. 關閉嚴格的空值檢查 (解決 TS18047 'possibly null' 錯誤)
+    // "strictNullChecks": false,
+    
+    // // 4. 忽略所有的宣告檔案檢查 (解決 leaflet 等找不到型別的錯誤)
+    // "skipLibCheck": true,
+    
+    // // 5. 即使有錯誤也允許編譯輸出
+    // "noEmitOnError": false
   }
 }
