@@ -1,0 +1,48 @@
+name: Deploy to GitHub Pages
+
+on:
+  # 當有程式碼 push 到 main 分支時觸發 (如果是 master 分支請自行修改)
+  push:
+    branches: [ main ]
+  
+  # 允許手動從 Actions 頁面觸發
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 下載你的程式碼
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. 設定 Node.js 環境
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # 3. 安裝依賴套件
+      - name: Install dependencies
+        run: npm ci  # 如果沒有 package-lock.json，請改用 npm install
+
+      # 4. 打包專案 (最關鍵的一步！)
+      # 這裡會讀取你在 GitHub Secrets 設定的變數，並注入到 Vite 打包過程中
+      - name: Build
+        run: npm run build
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_FB_APP_ID: ${{ secrets.VITE_FB_APP_ID }}
+          VITE_LINE_LIFF_ID: ${{ secrets.VITE_LINE_LIFF_ID }}
+
+      # 5. 將打包好的 dist 資料夾部署到 GitHub Pages
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist # Vite 預設打包輸出的資料夾名稱
+          branch: gh-pages # 部署到哪個分支 (腳本會自動建立這個分支)
