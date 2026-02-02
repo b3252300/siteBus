@@ -67,8 +67,8 @@ const drawer = ref(false)
 
 const { GetDateYYYYMMDD } = useDate();
 
-const dataList = ref<string[]>([]);
-const dataItem = ref(null);
+const dataList = ref<any[]>([]);
+const dataItem = ref<any>(null);
 
 onMounted(() => {
     init();
@@ -93,7 +93,7 @@ async function init() {
 
 
 const showNewsContent = ref<boolean[]>([]);
-const handleNews = (item, index) => {
+const handleNews = (item: any, index: any) => {
     console.log(item.NewsID);
     drawer.value = true;
     showNewsContent.value = []
@@ -101,15 +101,7 @@ const handleNews = (item, index) => {
     if (item) {
         showNewsContent.value[index] = true;
         fetchBusNewsItem(item.NewsID);
-
     }
-
-    // router.push({
-    //     name: "explainNews",
-    //     params: { NewsID: item.NewsID },
-    //     // 使用 history.state 傳整個物件，這樣不會顯示在 URL
-    //     state: { item },
-    // });
 };
 
 function fetchBusNews() {
