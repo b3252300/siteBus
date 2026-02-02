@@ -9,17 +9,7 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 // https://vite.dev/config/
 export default defineConfig({
   base: '/siteBus/',
-  plugins: [
-    vue({
-      script: {
-        typescript: {
-          experimentalParseJsonModuleExpressionStatement: true,
-        },
-      },
-    }), 
-    basicSsl(), 
-    svgSfc ( {  mark : "component"  } )
-  ],
+  plugins: [vue()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
