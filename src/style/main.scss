@@ -392,3 +392,33 @@ body,
      display: block;
   }
 }
+
+
+@keyframes MoveToRight {
+    from { left: 0; }
+    to { left: 80%; }
+}
+
+.leaflet-interactive.marker-soon{
+    transition: all 1s;
+   animation-name: MoveToRight;
+   animation-duration: 2s;
+   animation-iteration-count: infinite;
+   position: relative;
+   animation-fill-mode: forwards;
+   z-index: 9999 !important;
+
+
+ }
+
+ .responsive-input{
+        --el-input-placeholder-color: #9e9e9e;
+
+  .el-input__wrapper{
+    border-radius: 4px;
+  }
+ }
+
+ mark.search-mark {
+    background: #c2f0ff;
+}
