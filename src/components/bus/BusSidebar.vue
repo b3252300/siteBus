@@ -1,7 +1,7 @@
 <template>
   <div class="sidebar" :class="{ active: sidebar.sidebarOpen }">
     <slot name="top"></slot>
-    <el-scrollbar v-loading="load.loading" style="padding:10px; width:100%">
+    <el-scrollbar v-loading="load.loading" style="padding:0 10px 10px; width:100%">
      
           <slot />
     </el-scrollbar>

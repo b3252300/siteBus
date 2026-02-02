@@ -21,13 +21,14 @@
               <el-radio-button label="去程" value="go" type="success" />
               <el-radio-button label="往返" value="back" type="success" />
             </el-radio-group>
-
+           
             <el-text v-if="estimatedTime" v-loading="loadEstimatedTime" :key="estimatedTime"
               :class="['text-estimatedTime', styleEstimatedTime]">
               <img src="@/assets/icon-bus.svg">{{ estimatedTime }}</el-text>
 
           </div>
-          <div style="padding:10px 10px 0;">
+         
+          <div class="searchDate-container">
             <el-input v-model="searchDate" class="responsive-input" placeholder="請搜尋"
             @change="handleSearch">
               <template #suffix>
@@ -36,6 +37,11 @@
                 </el-icon>
               </template>
             </el-input>
+            <div class="updateTime" v-loading="load.loading" @click="handleUpdateTime">
+              <el-text>更新時間 {{ GetDateTimeYYYYMMDDHHmm(countdownTime) }}</el-text>
+              
+            </div>
+              
           </div>
 
         </template>
@@ -94,6 +100,8 @@ import iconUrl from "@/assets/Vector-icon.png?url";
 import iconRetinaUrl from "@/assets/Vector-icon-2x.png?url";
 import shadowUrl from "@/assets/Vector-shadow.png?url";
 import { useLoadingStore } from "@/stores/useLoading"
+import useDate from "@/utils/date.ts";
+const { GetDateTimeYYYYMMDDHHmm } = useDate();
 const load = useLoadingStore();
 const estimatedTime = ref(null);
 const loadEstimatedTime = ref(false);
@@ -127,10 +135,17 @@ const highlightIcon = L.icon({
   popupAnchor: [0, -40],
 });
 
-
+let countdownInterval = null; //公車每3分鐘更新一次
+let countdownTime = new Date(); // 更新時間
 onMounted(async () => {
   map.value = mapRef.value.getMap();
   await initData();
+
+  countdownInterval = setInterval(() => {
+    initData();
+
+    console.log("公車資料已更新於：" + countdownTime.toLocaleTimeString());
+  }, 180000); // 3分鐘更新一次
 });
 
 
@@ -143,15 +158,18 @@ async function initData() {
     applyDirectionFilter();
   } catch { } finally {
     load.closeLoading();
+    countdownTime = new Date();
   }
 
 
 }
 
+
+const handleUpdateTime = () => {
+  initData();
+};
+
 /* ================= API ================= */
-
-
-
 
 function fetchNetwork() {
   return tdxRequest
@@ -478,7 +496,7 @@ const formatEstimateTime = (seconds) => {
   if (minutes < 1) return "進站中";
   if (minutes < 2) return "即將到站";
 
-  return `剩 ${minutes} 分鐘`;
+  return `剩 ${minutes} 分鐘到站`;
 };
 
 /**

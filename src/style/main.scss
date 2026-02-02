@@ -422,3 +422,15 @@ body,
  mark.search-mark {
     background: #c2f0ff;
 }
+.searchDate-container{
+
+  padding:8px 10px 0; 
+  
+}
+
+.updateTime {
+    text-align: right;
+    color: var(--el-text-color-regular);
+    font-size: 14px;
+    cursor: pointer;
+}

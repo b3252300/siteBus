@@ -79,7 +79,7 @@ const props = withDefaults(defineProps<Props>(), {
 .map-layout__sidebar {
   width: 378px;
   flex: 0 0 378px;
-
+      background: linear-gradient(to bottom, #e2ece7 3%, #ffffff 49%);
 
   @media (max-width: 575px) {
     width: 100% !important;
