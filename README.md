@@ -5,7 +5,7 @@
 
 
 [![Live Demo](https://img.shields.io/badge/LIVE%20DEMO-GitHub%20Pages-4BC5A7.svg)](
-    https://gtut3252300.github.io/sitemap/#/
+    https://b3252300.github.io/siteBus/mapRoute/
 )
 [![Framework](https://img.shields.io/badge/Vue-3.x-4FC08D.svg)](https://vuejs.org/)
 [![Map Library](https://img.shields.io/badge/Map-Leaflet.js-green)](https://leafletjs.com/)
@@ -17,13 +17,13 @@
 本專案旨在提供新北市特定區域的都市更新地點查詢服務，並著重於前端技術整合的穩定性。
 
 ### 核心挑戰：原生第三方登入
-最大的挑戰是依據考題要求，**完全不依賴 Firebase 或高階 NPM 套件**，自行實現 Google 與 Facebook 的 OAuth 2.0 登入流程，並處理狀態綁定。
+
 
 ### 核心功能
-* ✅ **雙重身份驗證：** 必須同時完成 Google 登入 **與** Facebook 綁定才能解鎖查詢功能。
-* ✅ **原生 SDK 集成：** 使用 Google Identity Services (GIS) 與 Facebook JS SDK 實現登入。
+* ✅ **登入驗證：** Google 登入 **/** Facebook 登入  **/** Line 登入。
+* ✅ **原生 SDK 集成：** 使用 Google Identity Services (GIS) / Facebook JS SDK 實現登入 / LEFF 實現登入。
 * ✅ **地圖核心：** 使用 Leaflet.js 進行地圖渲染。
-* ✅ **雙頭像 Tooltip：** 在使用者定位 Pin 上方，顯示 Google 與 Facebook 兩個大頭貼。
+* ✅ **雙頭像 Tooltip：** 在使用者定位 Pin 上方，顯示 Google / Facebook / LINE 大頭貼。
 * ✅ **GeoJSON 渲染：** 成功解析並在地圖上繪製都更區域 Polygon (GeoJSON)。
 * ✅ **部署環境：** 部署於 GitHub Pages，並解決 Vite Subpath 與 Leaflet 路徑問題。
 
