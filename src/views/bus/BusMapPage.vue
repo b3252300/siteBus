@@ -1,4 +1,5 @@
 <template>
+
   <MapLayout>
 
     <template #sidebar>
@@ -20,7 +21,13 @@
               <el-radio-button label="去程" value="go" type="success" />
               <el-radio-button label="往返" value="back" type="success" />
             </el-radio-group>
+
+            <el-text v-if="estimatedTime" v-loading="loadEstimatedTime" :key="estimatedTime"
+              :class="['text-estimatedTime', styleEstimatedTime]">
+              <img src="@/assets/icon-bus.svg">{{ estimatedTime }}</el-text>
+
           </div>
+
         </template>
 
 
@@ -78,6 +85,10 @@ import iconRetinaUrl from "@/assets/Vector-icon-2x.png?url";
 import shadowUrl from "@/assets/Vector-shadow.png?url";
 import { useLoadingStore } from "@/stores/useLoading"
 const load = useLoadingStore();
+const estimatedTime = ref(null);
+const loadEstimatedTime = ref(false);
+const styleEstimatedTime = ref(null);
+
 
 const mapRef = ref(null);
 const map = ref(null);
@@ -92,7 +103,7 @@ const showLine = ref([]);
 const vaildControl = ref("go");
 const activeStopUID = ref(null);
 
-
+const busMarkersMap = new Map();
 const markersMap = new Map();
 
 
@@ -117,6 +128,10 @@ async function initData() {
 }
 
 /* ================= API ================= */
+
+
+
+
 function fetchNetwork() {
   return tdxRequest
     .get("/Bus/Network/City/Tainan?%24format=JSON")
@@ -125,6 +140,26 @@ function fetchNetwork() {
     });
 }
 
+
+//即將到站的動態顯示
+function estimatedTimeOfArrival(stopUID) {
+  loadEstimatedTime.value = true;
+  return tdxRequest
+    .get("/Bus/EstimatedTimeOfArrival/City/Tainan?%24format=JSON")
+    .then(res => {
+      console.log(res.data, "estimatedTimeOfArrival");
+      const { N1Datas } = res.data;
+      N1Datas.forEach(item => {
+        if (item.StopUID === stopUID) {
+          estimatedTime.value = formatEstimateTime(item.EstimateTime);
+          styleEstimatedTime.value = getEstimateType(item.EstimateTime);
+          console.log(item, "item");
+        }
+      });
+    }).finally(() => {
+      loadEstimatedTime.value = false;
+    });
+}
 function fetchStopOfRoute() {
   return tdxRequest
     .get("/Bus/StopOfRoute/City/Tainan?%24format=JSON")
@@ -194,6 +229,7 @@ function addMarkers(route) {
 
     marker.on("click", () => {
       flyToStop(stop);
+
     });
 
     markersMap.set(stop.StopUID, marker);
@@ -279,12 +315,38 @@ function flyToStop(stop) {
 
   activeStopUID.value = stop.StopUID;
   map.value.setView([lat, lng], 16);
+  estimatedTimeOfArrival(stop.StopUID);
 }
 
 /* ================= utils ================= */
 function directionText(val) {
   return val === 1 ? "去程" : "回程";
 }
+
+
+/* 格式化預估到站時間 API 回傳的 EstimateTime */
+const formatEstimateTime = (seconds) => {
+  if (seconds === undefined || seconds === null) return "未發車";
+
+  // 處理 TDX 特殊狀態 (通常是負數)
+  if (seconds < 0) return "未發車";
+
+  const minutes = Math.floor(seconds / 60);
+
+  if (minutes < 1) return "進站中";
+  if (minutes < 2) return "即將到站";
+
+  return `剩 ${minutes} 分鐘`;
+};
+
+/**
+ * 根據時間回傳顏色類別
+ */
+const getEstimateType = (seconds) => {
+  if (seconds < 60) return "danger";  // 紅色
+  if (seconds < 120) return "warning"; // 橘色
+  return "success";                    // 綠色
+};
 </script>
 
 <style scoped lang="scss">
@@ -314,5 +376,27 @@ function directionText(val) {
 
 .scrollbar-content {
   height: 80vh;
+}
+
+.text-estimatedTime {
+  --el-loading-spinner-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  img {
+    height: 10px;
+    width: auto;
+    margin-top: 3px;
+  }
+
+  &.warning {
+    color: #233D4D;
+  }
+
+  &.danger {
+    color: #D81200;
+  }
+
 }
 </style>
